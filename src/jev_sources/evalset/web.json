@@ -1,0 +1,28 @@
+{
+ "https://lagen.test/arbetsratt": "<html><head><title>t</title></head><body><p>Notice period for employees is one month.</p><p>After four years of employment it is two months.</p></body></html>",
+ "https://www.lagen.test/semester": "<html><head><title>t</title></head><body><p>Employees are entitled to 25 days of paid holiday per year.</p></body></html>",
+ "https://lagen.test/semester": "<html><head><title>t</title></head><body><p>Employees are entitled to 25 days of paid holiday per year.</p></body></html>",
+ "https://gov.test/lagstiftning/skatt": "<html><head><title>t</title></head><body><p>The standard VAT rate is 25 percent.</p><p>Food is taxed at 12 percent.</p></body></html>",
+ "https://gov.test/privat/intern": "<html><head><title>t</title></head><body><p>Internal memo: the VAT rate will be 30 percent.</p></body></html>",
+ "https://nyheter.test/debatt/a": "<html><head><title>t</title></head><body><p>Opinion: the notice period should be longer.</p></body></html>",
+ "https://blog.lagen.test/post": "<html><head><title>t</title></head><body><p>Notice period for employees is one month.</p></body></html>",
+ "https://evil.test/ny": "<html><head><title>t</title></head><body><p>Notice period for employees is one month.</p></body></html>",
+ "https://evil.test/x": "<html><head><title>t</title></head><body><p>Notice period for employees is one month.</p></body></html>",
+ "https://lagen.test.evil.test/arbetsratt": "<html><head><title>t</title></head><body><p>Notice period for employees is one month.</p></body></html>",
+ "https://gesetze.test/kuendigung": "<html><head><title>t</title></head><body><p>The notice period is four weeks.</p></body></html>",
+ "https://lagen.test/gamla": [
+  "redirect",
+  "https://evil.test/ny"
+ ],
+ "https://lagen.test/intern": [
+  "redirect",
+  "https://lagen.test/arbetsratt"
+ ],
+ "https://gov.test/lagstiftning/flytt": [
+  "redirect",
+  "https://gov.test/privat/intern"
+ ],
+ "https://web.archive.org/web/2023/https://lagen.test/arbetsratt": "<html><head><title>t</title></head><body><p>Notice period for employees is one month.</p></body></html>",
+ "https://webcache.googleusercontent.com/search?q=cache:https://lagen.test/arbetsratt": "<html><head><title>t</title></head><body><p>Notice period for employees is one month.</p></body></html>",
+ "https://lagen-test.translate.goog/arbetsratt": "<html><head><title>t</title></head><body><p>Notice period for employees is one month.</p></body></html>"
+}

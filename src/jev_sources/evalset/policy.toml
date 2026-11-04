@@ -1,0 +1,55 @@
+# Policy used by the evaluation and the demo. Invented sites (".test" never resolves on the real web).
+[policy]
+name = "eval-law"
+version = "1.2.0"
+jurisdictions = ["SE"]
+
+[[changelog]]
+version = "1.2.0"
+date = "2026-11-03"
+note = "Added the HR handbook document set."
+
+[[changelog]]
+version = "1.1.0"
+date = "2026-10-20"
+note = "Swedish government law pages only under /lagstiftning."
+
+[[allow]]
+id = "law-se"
+host = "lagen.test"
+subdomains = true
+jurisdiction = "SE"
+
+[[allow]]
+id = "gov-se"
+prefix = "https://gov.test/lagstiftning"
+jurisdiction = "SE"
+
+[[allow]]
+id = "news"
+host = "nyheter.test"
+
+[[allow]]
+id = "de-law"
+host = "gesetze.test"
+jurisdiction = "DE"
+
+[[allow]]
+id = "hr-docs"
+docset = "hr"
+
+[[deny]]
+id = "no-blog"
+host = "blog.lagen.test"
+
+[[deny]]
+id = "no-forum"
+prefix = "https://nyheter.test/debatt"
+
+[[docset]]
+id = "hr"
+root = "docs"
+[docset.files]
+"handbook.md" = "08523149df6f6336ce36d1ad54ab46749a545d19bbea483d01bb0e31a21a9267"
+"leave.md" = "f4487df10e7ddcb741bb9be974f2909b6b1b482a395c846cc300ee5cb9c24580"
+"changed.md" = "3c7ae1368e4dfa0e8a14fd4c4cc5a572b0a7e86671fbe437b62625205558e8ae"

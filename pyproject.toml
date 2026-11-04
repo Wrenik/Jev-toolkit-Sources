@@ -1,0 +1,31 @@
+[project]
+name = "jev-toolkit-sources"
+version = "0.1.0"
+description = "Source restriction: only sources on a human-readable allowlist policy may back an answer. Enforced before the model sees retrieval results and after it answers; every rejection names the rule."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Eric Ährlund" }]
+requires-python = ">=3.11"
+dependencies = [
+    "jev-toolkit-usage @ git+https://github.com/Wrenik/Jev-toolkit-usage.git",
+    "jev-toolkit-factcheck @ git+https://github.com/Wrenik/Jev-toolkit-FactCheck.git",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+jev_sources = ["evalset/*.json", "evalset/*.toml", "evalset/docs/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: calls the real Jev API (costs a fraction of a cent; needs TYPESAFE_API_KEY)"]
+addopts = "-m 'not live'"

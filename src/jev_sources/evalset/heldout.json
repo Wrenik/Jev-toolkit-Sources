@@ -1,0 +1,296 @@
+{
+ "scenarios": [
+  {
+   "id": "h01",
+   "category": "approved",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Food is taxed at 12 percent.",
+     "url": "https://gov.test/lagstiftning/skatt",
+     "quote": "Food is taxed at 12 percent."
+    }
+   ],
+   "expect": {
+    "state": "supported"
+   }
+  },
+  {
+   "id": "h02",
+   "category": "approved",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Employees are entitled to 25 days of paid holiday per year.",
+     "url": "https://LAGEN.TEST/semester#top",
+     "quote": "Employees are entitled to 25 days of paid holiday per year."
+    }
+   ],
+   "expect": {
+    "state": "supported"
+   }
+  },
+  {
+   "id": "h03",
+   "category": "approved",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Parental leave is 480 days per child.",
+     "url": "docset:hr/leave.md",
+     "quote": "Parental leave is 480 days per child."
+    }
+   ],
+   "expect": {
+    "state": "supported"
+   }
+  },
+  {
+   "id": "h04",
+   "category": "policy_overlap",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Opinion: the notice period should be longer.",
+     "url": "https://nyheter.test/debatt/a",
+     "quote": "Opinion: the notice period should be longer."
+    }
+   ],
+   "expect": {
+    "state": "forbidden_source",
+    "rule": "no-forum",
+    "not_contacted": [
+     "nyheter.test"
+    ]
+   }
+  },
+  {
+   "id": "h05",
+   "category": "forbidden",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Internal memo: the VAT rate will be 30 percent.",
+     "url": "https://gov.test/privat/intern",
+     "quote": "Internal memo: the VAT rate will be 30 percent."
+    }
+   ],
+   "expect": {
+    "state": "forbidden_source",
+    "rule": "builtin/default-deny",
+    "not_contacted": [
+     "gov.test"
+    ]
+   }
+  },
+  {
+   "id": "h06",
+   "category": "lookalike",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Notice period for employees is one month.",
+     "url": "https://evil.test/https://lagen.test/arbetsratt",
+     "quote": "Notice period for employees is one month."
+    }
+   ],
+   "expect": {
+    "state": "forbidden_source",
+    "rule": "builtin/default-deny",
+    "not_contacted": [
+     "evil.test"
+    ]
+   }
+  },
+  {
+   "id": "h07",
+   "category": "lookalike",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Notice period for employees is one month.",
+     "url": "https://xn--lagen-test-8ec.test/arbetsratt",
+     "quote": "Notice period for employees is one month."
+    }
+   ],
+   "expect": {
+    "state": "forbidden_source",
+    "rule": "builtin/default-deny"
+   }
+  },
+  {
+   "id": "h08",
+   "category": "forbidden",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Notice period for employees is one month.",
+     "url": "http://lagen.test/arbetsratt",
+     "quote": "Notice period for employees is one month."
+    }
+   ],
+   "expect": {
+    "state": "forbidden_source",
+    "rule": "law-se",
+    "not_contacted": [
+     "lagen.test"
+    ]
+   }
+  },
+  {
+   "id": "h09",
+   "category": "forbidden",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Notice period for employees is one month.",
+     "url": "https://lagen.test:8443/arbetsratt",
+     "quote": "Notice period for employees is one month."
+    }
+   ],
+   "expect": {
+    "state": "forbidden_source",
+    "rule": "builtin/port"
+   }
+  },
+  {
+   "id": "h10",
+   "category": "redirect",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Internal memo: the VAT rate will be 30 percent.",
+     "url": "https://gov.test/lagstiftning/flytt",
+     "quote": "Internal memo: the VAT rate will be 30 percent."
+    }
+   ],
+   "expect": {
+    "state": "forbidden_source",
+    "rule": "builtin/default-deny"
+   }
+  },
+  {
+   "id": "h11",
+   "category": "redirect",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Internal memo: the VAT rate will be 30 percent.",
+     "url": "https://gov.test/lagstiftning/%2e%2e/privat/intern",
+     "quote": "Internal memo: the VAT rate will be 30 percent."
+    }
+   ],
+   "expect": {
+    "state": "forbidden_source",
+    "rule": "builtin/default-deny",
+    "not_contacted": [
+     "gov.test"
+    ]
+   }
+  },
+  {
+   "id": "h12",
+   "category": "redirect",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Notice period for employees is one month.",
+     "url": "https://webcache.googleusercontent.com/search?q=cache:https://lagen.test/arbetsratt",
+     "quote": "Notice period for employees is one month."
+    }
+   ],
+   "expect": {
+    "state": "forbidden_source",
+    "rule": "builtin/wrapper",
+    "not_contacted": [
+     "webcache.googleusercontent.com"
+    ]
+   }
+  },
+  {
+   "id": "h13",
+   "category": "redirect",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Notice period for employees is one month.",
+     "url": "https://lagen-test.translate.goog/arbetsratt",
+     "quote": "Notice period for employees is one month."
+    }
+   ],
+   "expect": {
+    "state": "forbidden_source",
+    "rule": "builtin/wrapper"
+   }
+  },
+  {
+   "id": "h14",
+   "category": "untraceable",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "The VAT rate is 25 percent.",
+     "url": "https://gov.test/lagstiftning/skatt",
+     "quote": ""
+    }
+   ],
+   "expect": {
+    "state": "untraceable"
+   }
+  },
+  {
+   "id": "h15",
+   "category": "untraceable",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Sweden joined the EU in 1995."
+    }
+   ],
+   "expect": {
+    "state": "untraceable"
+   }
+  },
+  {
+   "id": "h16",
+   "category": "insufficient",
+   "claims": [
+    {
+     "id": "c1",
+     "claim": "Employees are entitled to 40 days of paid holiday per year at the manager level.",
+     "url": "https://lagen.test/semester",
+     "quote": "Employees are entitled to 25 days of paid holiday per year."
+    }
+   ],
+   "expect": {
+    "state": "not_supported"
+   }
+  }
+ ],
+ "policies": [
+  {
+   "id": "p5",
+   "category": "malformed_policy",
+   "toml": "[policy]\nname = \"x\"\nversion = \"1.0.0\"\n[[changelog]]\nversion = \"1.0.0\"\ndate = \"2026-11-03\"\nnote = \"x\"\n[[allow]]\nid = \"a\"\ndocset = \"d\"\n[[docset]]\nid = \"d\"\nroot = \"x\"\n[docset.files]\n\"a.md\" = \"nothex\"\n",
+   "expect_error": "not a sha256"
+  },
+  {
+   "id": "p6",
+   "category": "malformed_policy",
+   "toml": "[policy]\nname = \"x\"\nversion = \"1.0.0\"\n[[changelog]]\nversion = \"1.0.0\"\ndate = \"2026-11-03\"\nnote = \"x\"\n[[allow]]\nid = \"a\"\nhost = \"a.test\"\n[[deny]]\nid = \"a\"\nhost = \"b.test\"\n",
+   "expect_error": "duplicate id"
+  },
+  {
+   "id": "p7",
+   "category": "malformed_policy",
+   "toml": "[policy]\nname = \"x\"\nversion = \"1.0.0\"\n[[changelog]]\nversion = \"1.0.0\"\ndate = \"2026-11-03\"\nnote = \"x\"\n[[allow]]\nid = \"a\"\ndocset = \"missing\"\n",
+   "expect_error": "no [[docset]] section"
+  },
+  {
+   "id": "p8",
+   "category": "malformed_policy",
+   "toml": "[policy]\nname = \"x\"\nversion = \"1.0.0\"\n[[changelog]]\nversion = \"1.0.0\"\ndate = \"2026-11-03\"\nnote = \"x\"\n",
+   "expect_error": "no [[allow]] rules"
+  }
+ ]
+}
