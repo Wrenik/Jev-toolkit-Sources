@@ -82,6 +82,9 @@ def cmd_validate(args) -> int:
         print(f"  - {line}")
     for w in p.warnings:
         print(("note: " if w.startswith("overlap (carve-out)") else "warning: ") + w)
+    from .suffixes import snapshot_info
+    snap = snapshot_info()
+    print(f"Public Suffix List snapshot: {snap.get('PSL version', '?')} ({snap.get('Rules', '?')} ICANN rules; refresh with tools/update_suffixes.py)")
     if p.changelog:
         c = max(p.changelog, key=lambda e: tuple(int(x) for x in e["version"].split(".")))
         print(f"Latest change {c['version']} ({c['date']}): {c['note']}")

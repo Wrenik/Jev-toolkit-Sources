@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .suffixes import is_multi_tenant, is_public_suffix, user_content_host
+from .suffixes import is_icann_suffix, is_multi_tenant, is_public_suffix, user_content_host
 from .urlcanon import UrlRejected, canonical_host, canonicalize
 
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,39}$")
@@ -31,7 +31,7 @@ JUR_RE = re.compile(r"^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})?$")
 NOTE_MAX = 200
 
 _POLICY_KEYS = {"name", "version", "jurisdictions", "allow_archives", "web_search"}
-_RULE_KEYS = {"id", "host", "subdomains", "prefix", "docset", "jurisdiction", "canonical", "note", "allow_http"}
+_RULE_KEYS = {"id", "host", "suffix", "subdomains", "prefix", "docset", "jurisdiction", "canonical", "note", "allow_http"}
 _DOCSET_KEYS = {"id", "root", "files", "note"}
 _CHANGELOG_KEYS = {"version", "date", "note"}
 
@@ -51,6 +51,7 @@ class Rule:
     kind: str  # domain | url_prefix | docset
     host: str = ""  # canonical (punycode) host for domain rules, or the host of a prefix rule
     subdomains: bool = False
+    suffix: bool = False  # host is a registry-controlled public suffix: matches every domain registered UNDER it, not the suffix itself
     prefix_path: str = ""  # url_prefix: path without trailing slash ("" = whole host)
     prefix_scheme: str = "https"
     docset: str = ""
@@ -60,6 +61,8 @@ class Rule:
     note: str = ""
 
     def describe(self) -> str:
+        if self.kind == "domain" and self.suffix:
+            return f"every domain under the registry suffix {self.host}"
         if self.kind == "domain":
             return f"domain {self.host}" + (" (and its subdomains)" if self.subdomains else "")
         if self.kind == "url_prefix":
@@ -134,9 +137,9 @@ def _parse_rule(table: Any, effect: str, index: int, errors: list[str]) -> Rule 
     else:
         where = f"[[{effect}]] {rid!r}"
     _check_keys(table, _RULE_KEYS, where, errors)
-    kinds = [k for k in ("host", "prefix", "docset") if k in table]
+    kinds = [k for k in ("host", "suffix", "prefix", "docset") if k in table]
     if len(kinds) != 1:
-        errors.append(f"{where}: give exactly one of host / prefix / docset (found {kinds or 'none'})")
+        errors.append(f"{where}: give exactly one of host / suffix / prefix / docset (found {kinds or 'none'})")
         return None
     note = _text(table, "note", where, errors)
     jur = table.get("jurisdiction", "")
@@ -167,6 +170,20 @@ def _parse_rule(table: Any, effect: str, index: int, errors: list[str]) -> Rule 
                 errors.append(f"{where}.canonical: not a valid host")
                 canon = ""
         return Rule(kind="domain", host=host, subdomains=table.get("subdomains") is True, canonical=canon, **common)
+    if kind == "suffix":
+        try:
+            suf = canonical_host(str(table["suffix"]))
+        except UrlRejected as exc:
+            errors.append(f"{where}.suffix: {exc.detail or exc.code} (got {table['suffix']!r})")
+            return None
+        if table.get("subdomains") is not None:
+            errors.append(f"{where}: 'subdomains' does not apply to a suffix rule (it always covers everything under the suffix)")
+        if is_multi_tenant(suf) or not is_icann_suffix(suf):
+            why = ("a private platform suffix that hands names to unrelated customers" if is_multi_tenant(suf)
+                   else "not a registry-controlled public suffix in the bundled Public Suffix List (ICANN section)")
+            errors.append(f"{where}.suffix: {suf!r} is {why}; use host = ... for one organisation")
+            return None
+        return Rule(kind="domain", host=suf, subdomains=True, suffix=True, **common)
     if kind == "prefix":
         try:
             c = canonicalize(str(table["prefix"]))
@@ -221,6 +238,9 @@ def _overlap_warnings(policy: Policy) -> list[str]:
     def overlaps(a: Rule, b: Rule) -> bool:  # can some URL match both rules?
         if a.kind == "docset" or b.kind == "docset":
             return a.kind == b.kind and a.docset == b.docset
+        if a.suffix or b.suffix:
+            s_, o = (a, b) if a.suffix else (b, a)
+            return o.host.endswith("." + s_.host)
         host_hit = a.host == b.host or (a.subdomains and b.host.endswith("." + a.host)) or (b.subdomains and a.host.endswith("." + b.host))
         if not host_hit:
             return False
@@ -249,8 +269,10 @@ def _overlap_warnings(policy: Policy) -> list[str]:
             out.append(f"duplicate: allow {a.id!r} repeats {seen[key]!r}")
         seen.setdefault(key, a.id)
     for r in policy.allows:
-        if r.kind == "domain" and r.subdomains and is_public_suffix(r.host):
-            out.append(f"public-suffix: allow {r.id!r} with subdomains = true on {r.host!r}, which looks like a public suffix; it approves every registrant under it, not one organisation")
+        if r.suffix:
+            out.append(f"broad: allow {r.id!r} approves EVERY domain registered under {r.host!r}; that is what suffix = means, so keep it for registries that only sell to public bodies")
+        elif r.kind == "domain" and r.subdomains and is_public_suffix(r.host):
+            out.append(f"public-suffix: allow {r.id!r} with subdomains = true on {r.host!r}, which looks like a public suffix; it approves every registrant under it, not one organisation. If that is what you want, write suffix = {r.host!r}")
         elif r.kind == "domain" and not r.subdomains and is_public_suffix(r.host):
             out.append(f"public-suffix: allow {r.id!r} names {r.host!r}, which looks like a public suffix; did you mean a host below it?")
         elif r.kind == "domain" and user_content_host(r.host):

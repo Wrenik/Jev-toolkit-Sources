@@ -35,6 +35,20 @@ _ENCODED_SEP = re.compile(r"%(?:2f|5c)", re.I)
 _ENCODED_DOT = re.compile(r"%2e", re.I)
 
 
+def _invisible(text: str) -> bool:
+    """Control, format (zero-width, bidi override, soft hyphen), separator, private-use or surrogate characters.
+    They are invisible or reorder what a reader sees, and UTS #46 silently drops many of them, so a browser may
+    reach a different name or path than the one shown."""
+    return any(unicodedata.category(c) in ("Cc", "Cf", "Zs", "Zl", "Zp", "Co", "Cs") for c in text)
+
+
+def _strict_unquote(text: str) -> str:
+    try:
+        return unquote(text, errors="strict")
+    except UnicodeDecodeError as exc:
+        raise UrlRejected("bad_encoding", "a percent-encoded byte sequence that is not valid UTF-8 (overlong forms such as %C0%AF are used to hide slashes)") from exc
+
+
 class UrlRejected(Exception):
     """The URL cannot be turned into a safe canonical form. `code` is a stable identifier, `detail` is for humans."""
 
@@ -109,15 +123,16 @@ def _norm_path(raw_path: str) -> str:
         path = nxt
     if "\\" in path:
         raise UrlRejected("backslash", "backslashes are read as slashes by browsers; use forward slashes")
-    if any(ord(c) < 32 or ord(c) == 127 for c in unquote(path)):
-        raise UrlRejected("bad_characters", "a percent-encoded control character (such as %00) in the path")
+    decoded = _strict_unquote(path)
+    if _invisible(decoded.replace(" ", "")):  # %20 is an ordinary space
+        raise UrlRejected("bad_characters", "a control, zero-width or bidi-override character (possibly percent-encoded, such as %00) in the path")
     out: list[str] = []
     for seg in path.split("/")[1:] if path.startswith("/") else path.split("/"):
         if seg == "..":
             if out:
                 out.pop()
         elif seg not in ("", "."):
-            out.append(unquote(seg))
+            out.append(_strict_unquote(seg))
     trailing = path.endswith("/") or path.endswith("/.") or path.endswith("/..")
     return "/" + "/".join(out) + ("/" if trailing and out else "")
 
@@ -130,8 +145,8 @@ def canonicalize(url: str, *, allow_wrappers: bool = False, _depth: int = 0) -> 
     url = url.strip()
     if len(url) > MAX_URL:
         raise UrlRejected("url_too_long")
-    if any(ord(c) < 33 or ord(c) == 127 for c in url):
-        raise UrlRejected("bad_characters", "whitespace or control characters in the URL")
+    if any(ord(c) < 33 or ord(c) == 127 for c in url) or _invisible(url):
+        raise UrlRejected("bad_characters", "whitespace, control, zero-width or bidi-override characters in the URL")
     low = url.lower()
     if low.startswith("docset:"):
         rest = url[len("docset:"):]
@@ -175,7 +190,7 @@ def canonicalize(url: str, *, allow_wrappers: bool = False, _depth: int = 0) -> 
         inner = _unwrap(host, parts.path, query, _depth)
     embedded: list[Canon] = []
     for _k, v in parse_qsl(query, keep_blank_values=False):
-        v = v.strip()
+        v = _peel(v.strip())
         if _URLISH.match(v) and _depth < 2:
             try:
                 embedded.append(canonicalize("https:" + v if v.startswith("//") else v, _depth=_depth + 1))
@@ -183,6 +198,16 @@ def canonicalize(url: str, *, allow_wrappers: bool = False, _depth: int = 0) -> 
                 embedded.append(Canon(kind="web", scheme="https", host="unparseable.invalid"))
     return Canon(kind="web", scheme=scheme, host=host, port=port, path=path, query=query, wrapper=wrapper, inner=inner,
                  embedded=tuple(embedded), non_ascii_host=non_ascii)
+
+
+def _peel(v: str) -> str:
+    """Decode a query value up to three more times: a server behind a proxy may decode twice (%2568 -> %68 -> h)."""
+    for _ in range(3):
+        n = unquote(v).strip()
+        if n == v:
+            break
+        v = n
+    return v
 
 
 def _unwrap(host: str, path: str, query: str, depth: int) -> Canon | None:

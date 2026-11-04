@@ -23,7 +23,7 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.setuptools.package-data]
-jev_sources = ["evalset/*.json", "evalset/*.toml", "evalset/docs/*", "templates/*.toml"]
+jev_sources = ["evalset/*.json", "evalset/*.toml", "evalset/docs/*", "templates/*.toml", "data/*.dat"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

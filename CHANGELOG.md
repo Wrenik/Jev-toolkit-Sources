@@ -2,6 +2,12 @@
 
 ## 0.1.0 (unreleased)
 
+### Round 2
+
+* Bundled Public Suffix List snapshot (ICANN section, 77 KB, MPL-2.0 data file) with the real PSL algorithm; `tools/update_suffixes.py` regenerates it. New `suffix =` rule (e.g. `gov.uk`). `validate` prints the snapshot version.
+* 64 new held-out URL tricks (`tests/test_sources_round2.py`, first-run record in `docs/ROUND2_HELDOUT.md`); fixes: bidi/zero-width/format characters in a URL, invalid UTF-8 (overlong `%C0%AF`) in paths, multiply-encoded URLs in query values.
+* `hash` skips symlinks that leave the folder; symlink and relative-root docset tests. `report.py` renders `forbidden_source`. End-to-end example (`examples/`, `docs/END_TO_END.md`). `docs/PRIOR_ART.md`, SECURITY.md threat model.
+
 First release. Source restriction with a versioned TOML allowlist policy, enforced before the model sees retrieval results (`filter`, `fetch`, optional Claude Code hook) and after it answers (`check`).
 
 ### Added

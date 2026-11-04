@@ -43,7 +43,7 @@ def test_valid_policy_loads_and_summarises():
     (lambda d: d["policy"].pop("version"), "version"),
     (lambda d: d["changelog"].clear(), "no entry for the current version"),
     (lambda d: d["allow"][0].update(typo=1), "unknown key 'typo'"),
-    (lambda d: d["allow"][0].update(prefix="https://x.example/"), "exactly one of host / prefix / docset"),
+    (lambda d: d["allow"][0].update(prefix="https://x.example/"), "exactly one of host / suffix / prefix / docset"),
     (lambda d: d["allow"].append({"id": "law", "host": "other.example"}), "duplicate id"),
     (lambda d: d["allow"][0].update(host="localhost"), "no dot"),
     (lambda d: d["allow"][0].update(host="10.0.0.1"), "IP address"),

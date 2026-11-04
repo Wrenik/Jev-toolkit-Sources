@@ -1,0 +1,21 @@
+# End-to-end example policy. Hosts are invented (.example); nothing here is a real site.
+[policy]
+name = "e2e-demo"
+version = "1.0.0"
+
+[[changelog]]
+version = "1.0.0"
+date = "2026-11-04"
+note = "Example: one statute site, one deny carve-out."
+
+[[allow]]
+id = "statutes"
+host = "lagen.example"
+subdomains = true
+note = "Official statute text."
+
+[[deny]]
+id = "no-forums"
+host = "forum.example"
+subdomains = true
+note = "Discussion boards are opinions, not sources."

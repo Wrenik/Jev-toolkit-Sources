@@ -1,0 +1,13 @@
+{
+  "text": "Employees are entitled to 25 days of paid holiday per year. Parental leave is 480 days per child. The notice period is three months. Most employers allow 30 days in practice.",
+  "claims": [
+    {"id": "c1", "claim": "Employees are entitled to 25 days of paid holiday per year.", "url": "https://lagen.example/semester",
+     "quote": "Employees are entitled to 25 days of paid holiday per year.", "span": [0, 59]},
+    {"id": "c2", "claim": "Parental leave is 480 days per child.", "url": "https://www.lagen.example/foraldraledighet",
+     "quote": "Parental leave is 480 days per child.", "span": [60, 97]},
+    {"id": "c3", "claim": "The notice period is three months.", "url": "https://lagen.example/uppsagning",
+     "quote": "The notice period is three months.", "span": [98, 132]},
+    {"id": "c4", "claim": "Most employers allow 30 days in practice.", "url": "https://forum.example/t/holiday-days",
+     "quote": "Most employers allow 30 days in practice.", "span": [133, 174]}
+  ]
+}

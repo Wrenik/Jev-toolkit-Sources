@@ -30,7 +30,7 @@ def host_possible(policy: Policy, host: str) -> bool:
     for r in policy.allows:
         if not policy.active(r):
             continue
-        if (r.kind == "domain" and (host == r.host or (r.subdomains and host.endswith("." + r.host)))) or (r.kind == "url_prefix" and host == r.host):
+        if (r.kind == "domain" and ((host == r.host and not r.suffix) or (r.subdomains and host.endswith("." + r.host)))) or (r.kind == "url_prefix" and host == r.host):
             return True
     return policy.allow_archives and host in WRAPPER_HOSTS
 

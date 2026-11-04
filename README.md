@@ -63,6 +63,10 @@ Decision:   REJECTED by builtin/default-deny
 
 Starter policies are in `src/jev_sources/templates/` (`docs-only`, `gov-sources`, `offline-corpus`). The policy format, URL handling, the hook and the evaluation: [docs/SOURCE_RESTRICTION.md](docs/SOURCE_RESTRICTION.md). Release history: [CHANGELOG.md](CHANGELOG.md).
 
+## End to end with FactCheck
+
+`python examples/end_to_end.py report.html` runs a four-claim `claims.json` through the policy-guarded fetcher and FactCheck's renderer, offline; the claim that cites a denied forum is rejected, never contacted, and the report names the rule `no-forums`. See [docs/END_TO_END.md](docs/END_TO_END.md) and the saved [report](docs/end_to_end_report.html). Research behind the design: [docs/PRIOR_ART.md](docs/PRIOR_ART.md).
+
 ## License
 
-MIT, see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE). Exception: `src/jev_sources/data/public_suffix_icann.dat` is derived from the Mozilla Public Suffix List and stays under MPL-2.0 (notice in its header).

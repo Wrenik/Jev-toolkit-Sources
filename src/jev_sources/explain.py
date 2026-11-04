@@ -13,6 +13,8 @@ def _why_not(rule: Rule, c: Canon) -> str:
     if c.kind != "web":
         return "not a web URL"
     if rule.kind == "domain":
+        if rule.suffix:
+            return f"host {c.host} is not registered under the suffix {rule.host} (the suffix itself is not a site)"
         if rule.subdomains:
             return f"host {c.host} is neither {rule.host} nor a subdomain of it"
         return f"host {c.host} is not {rule.host} (subdomains are not included; add subdomains = true to include them)"

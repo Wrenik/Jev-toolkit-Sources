@@ -42,6 +42,8 @@ def _match(rule: Rule, c: Canon, fold: bool = False) -> bool:
         return c.kind == "docset" and c.docset == rule.docset
     if c.kind != "web":
         return False
+    if rule.kind == "domain" and rule.suffix:
+        return c.host.endswith("." + rule.host)  # never the suffix itself, only names registered under it
     if rule.kind == "domain":
         return c.host == rule.host or (rule.subdomains and c.host.endswith("." + rule.host))
     if c.host != rule.host:
@@ -161,6 +163,6 @@ def sha256_manifest(folder: str | Path, patterns: tuple[str, ...] = (".txt", ".m
     root = Path(folder).resolve()
     out: dict[str, str] = {}
     for p in sorted(root.rglob("*")):
-        if p.is_file() and p.suffix.lower() in patterns:
+        if p.is_file() and p.suffix.lower() in patterns and root in p.resolve().parents:  # skip links that leave the folder
             out[p.relative_to(root).as_posix()] = hashlib.sha256(p.read_bytes()).hexdigest()
     return out
