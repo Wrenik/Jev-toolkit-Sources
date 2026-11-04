@@ -21,15 +21,37 @@ MAX_URL = 2000
 
 # Hosts that serve a COPY of, or a REDIRECT to, another URL. A policy approves the original, not the copy.
 WRAPPER_HOSTS = {
-    "web.archive.org": "archive", "archive.org": "archive", "archive.ph": "archive", "archive.is": "archive",
-    "archive.today": "archive", "archive.li": "archive", "archive.vn": "archive", "archive.md": "archive",
-    "webcache.googleusercontent.com": "cache", "cache.google.com": "cache", "cachedview.nl": "cache",
-    "translate.google.com": "translate", "translate.goog": "translate", "translate.googleusercontent.com": "translate",
-    "bing.com": "cache", "r.jina.ai": "proxy", "12ft.io": "proxy", "outline.com": "proxy",
-    "google.com": "redirect", "www.google.com": "redirect", "l.facebook.com": "redirect", "t.co": "redirect",
-    "bit.ly": "shortener", "tinyurl.com": "shortener", "goo.gl": "shortener", "ow.ly": "shortener", "is.gd": "shortener",
+    "web.archive.org": "archive",
+    "archive.org": "archive",
+    "archive.ph": "archive",
+    "archive.is": "archive",
+    "archive.today": "archive",
+    "archive.li": "archive",
+    "archive.vn": "archive",
+    "archive.md": "archive",
+    "webcache.googleusercontent.com": "cache",
+    "cache.google.com": "cache",
+    "cachedview.nl": "cache",
+    "translate.google.com": "translate",
+    "translate.goog": "translate",
+    "translate.googleusercontent.com": "translate",
+    "bing.com": "cache",
+    "r.jina.ai": "proxy",
+    "12ft.io": "proxy",
+    "outline.com": "proxy",
+    "google.com": "redirect",
+    "www.google.com": "redirect",
+    "l.facebook.com": "redirect",
+    "t.co": "redirect",
+    "bit.ly": "shortener",
+    "tinyurl.com": "shortener",
+    "goo.gl": "shortener",
+    "ow.ly": "shortener",
+    "is.gd": "shortener",
 }
-_WRAPPER_PATH = re.compile(r"^/(?:web/)?(?:\d{1,14}[a-z_]{0,3}/)?(https?:/{1,2}.+)$", re.I)  # web.archive.org/web/2020/https://x
+_WRAPPER_PATH = re.compile(
+    r"^/(?:web/)?(?:\d{1,14}[a-z_]{0,3}/)?(https?:/{1,2}.+)$", re.I
+)  # web.archive.org/web/2020/https://x
 _URLISH = re.compile(r"^(?:https?:)?//", re.I)
 _ENCODED_SEP = re.compile(r"%(?:2f|5c)", re.I)
 _ENCODED_DOT = re.compile(r"%2e", re.I)
@@ -46,7 +68,10 @@ def _strict_unquote(text: str) -> str:
     try:
         return unquote(text, errors="strict")
     except UnicodeDecodeError as exc:
-        raise UrlRejected("bad_encoding", "a percent-encoded byte sequence that is not valid UTF-8 (overlong forms such as %C0%AF are used to hide slashes)") from exc
+        raise UrlRejected(
+            "bad_encoding",
+            "a percent-encoded byte sequence that is not valid UTF-8 (overlong forms such as %C0%AF are used to hide slashes)",
+        ) from exc
 
 
 class UrlRejected(Exception):
@@ -92,7 +117,9 @@ def canonical_host(host: str) -> str:
     except ValueError:
         is_ip = h.startswith("[") or h.startswith("0x") or h.replace(".", "").isdigit()
     if is_ip:
-        raise UrlRejected("ip_literal_host", f"{h} is an IP address or number-style host; policies match domain names only")
+        raise UrlRejected(
+            "ip_literal_host", f"{h} is an IP address or number-style host; policies match domain names only"
+        )
     if not h.isascii():
         try:
             ascii_h = h.encode("idna").decode("ascii")
@@ -101,7 +128,10 @@ def canonical_host(host: str) -> str:
         # Python's codec is IDNA 2003: it maps "straße" to "strasse", a DIFFERENT domain from the one a browser
         # (IDNA 2008) reaches. If the name does not survive a round trip, we cannot say which host is meant.
         if ascii_h.encode("ascii").decode("idna") != unicodedata.normalize("NFC", h):
-            raise UrlRejected("ambiguous_idna_host", f"{h!r} is mapped to a different name by IDNA 2003 ({ascii_h}); write the xn-- form of the host you mean")
+            raise UrlRejected(
+                "ambiguous_idna_host",
+                f"{h!r} is mapped to a different name by IDNA 2003 ({ascii_h}); write the xn-- form of the host you mean",
+            )
         h = ascii_h
     if any(not label or len(label) > 63 for label in h.split(".")):
         raise UrlRejected("malformed_host", h)
@@ -125,7 +155,10 @@ def _norm_path(raw_path: str) -> str:
         raise UrlRejected("backslash", "backslashes are read as slashes by browsers; use forward slashes")
     decoded = _strict_unquote(path)
     if _invisible(decoded.replace(" ", "")):  # %20 is an ordinary space
-        raise UrlRejected("bad_characters", "a control, zero-width or bidi-override character (possibly percent-encoded, such as %00) in the path")
+        raise UrlRejected(
+            "bad_characters",
+            "a control, zero-width or bidi-override character (possibly percent-encoded, such as %00) in the path",
+        )
     out: list[str] = []
     for seg in path.split("/")[1:] if path.startswith("/") else path.split("/"):
         if seg == "..":
@@ -149,14 +182,14 @@ def canonicalize(url: str, *, allow_wrappers: bool = False, _depth: int = 0) -> 
         raise UrlRejected("bad_characters", "whitespace, control, zero-width or bidi-override characters in the URL")
     low = url.lower()
     if low.startswith("docset:"):
-        rest = url[len("docset:"):]
+        rest = url[len("docset:") :]
         ds, _, rel = rest.partition("/")
         if not ds or not rel or "\\" in rel or _ENCODED_SEP.search(rel) or "%" in rel:
             raise UrlRejected("bad_docset_ref", "expected docset:<id>/<relative/path>")
-        parts = rel.split("/")
-        if any(p in ("", ".", "..") for p in parts):
+        segs = rel.split("/")
+        if any(p in ("", ".", "..") for p in segs):
             raise UrlRejected("bad_docset_ref", "no empty, '.' or '..' path segments")
-        return Canon(kind="docset", docset=ds, relpath="/".join(parts))
+        return Canon(kind="docset", docset=ds, relpath="/".join(segs))
     if "\\" in url:
         raise UrlRejected("backslash", "backslashes are read as slashes by browsers; use forward slashes")
     try:
@@ -170,7 +203,9 @@ def canonicalize(url: str, *, allow_wrappers: bool = False, _depth: int = 0) -> 
     if scheme not in ("http", "https"):
         raise UrlRejected("bad_scheme", f"{scheme}: URLs are not sources (only http, https and docset: are)")
     if parts.username is not None or parts.password is not None or "@" in parts.netloc:
-        raise UrlRejected("userinfo_in_url", "text before '@' is not the host; this form is used to impersonate a trusted site")
+        raise UrlRejected(
+            "userinfo_in_url", "text before '@' is not the host; this form is used to impersonate a trusted site"
+        )
     raw_host = parts.hostname or ""
     host = canonical_host(raw_host)
     non_ascii = raw_host.lower() if not raw_host.isascii() else ""
@@ -181,7 +216,11 @@ def canonicalize(url: str, *, allow_wrappers: bool = False, _depth: int = 0) -> 
     query = parts.query
     wrapper = WRAPPER_HOSTS.get(host, "")
     inner = None
-    if wrapper in ("archive", "cache", "translate", "proxy") or (wrapper == "redirect" and parts.path in ("/url", "/amp")) or wrapper in ("shortener",):
+    if (
+        wrapper in ("archive", "cache", "translate", "proxy")
+        or (wrapper == "redirect" and parts.path in ("/url", "/amp"))
+        or wrapper in ("shortener",)
+    ):
         inner = _unwrap(host, parts.path, query, _depth)
     elif host.endswith(".translate.goog"):
         wrapper = "translate"
@@ -196,8 +235,18 @@ def canonicalize(url: str, *, allow_wrappers: bool = False, _depth: int = 0) -> 
                 embedded.append(canonicalize("https:" + v if v.startswith("//") else v, _depth=_depth + 1))
             except UrlRejected:
                 embedded.append(Canon(kind="web", scheme="https", host="unparseable.invalid"))
-    return Canon(kind="web", scheme=scheme, host=host, port=port, path=path, query=query, wrapper=wrapper, inner=inner,
-                 embedded=tuple(embedded), non_ascii_host=non_ascii)
+    return Canon(
+        kind="web",
+        scheme=scheme,
+        host=host,
+        port=port,
+        path=path,
+        query=query,
+        wrapper=wrapper,
+        inner=inner,
+        embedded=tuple(embedded),
+        non_ascii_host=non_ascii,
+    )
 
 
 def _peel(v: str) -> str:

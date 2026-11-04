@@ -4,7 +4,6 @@ import json
 
 import pytest
 
-from jev_sources.policy import parse_policy
 from jev_sources.prefilter import filter_json, grant_once, run_hook
 
 TOML = """
@@ -39,12 +38,14 @@ def test_filter_keeps_only_approved_and_tells_model_only_a_count(tmp_path):
     p = tmp_path / "p.toml"
     p.write_text(TOML, encoding="utf-8")
     pol = load_policy(p)
-    data = {"results": [
-        {"url": "https://lagen.example/a", "title": "good", "snippet": "ok"},
-        {"url": "https://evil.example/x", "title": "SECRET TITLE", "snippet": "SECRET SNIPPET"},
-        {"url": "https://lagen.example@evil.example/", "title": "tricky"},
-        {"title": "no url"},
-    ]}
+    data = {
+        "results": [
+            {"url": "https://lagen.example/a", "title": "good", "snippet": "ok"},
+            {"url": "https://evil.example/x", "title": "SECRET TITLE", "snippet": "SECRET SNIPPET"},
+            {"url": "https://lagen.example@evil.example/", "title": "tricky"},
+            {"title": "no url"},
+        ]
+    }
     log = tmp_path / "f.jsonl"
     out = filter_json(pol, data, log)
     text = json.dumps(out)

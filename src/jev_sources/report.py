@@ -15,8 +15,10 @@ _LABELS = {
     "forbidden_source": ("⛔", "Source not approved by the policy"),
     "untraceable": ("?", "No source given (not approved)"),
 }
-_CSS = (".s-forbidden_source{border-color:var(--bad);border-bottom-style:solid;border-bottom-width:4px}"
-        ".s-untraceable{border-color:var(--na);border-bottom-style:dotted;border-bottom-width:3px}")
+_CSS = (
+    ".s-forbidden_source{border-color:var(--bad);border-bottom-style:solid;border-bottom-width:4px}"
+    ".s-untraceable{border-color:var(--na);border-bottom-style:dotted;border-bottom-width:3px}"
+)
 
 
 def render_report(text: str, results: list[Any], **kwargs: Any) -> str:

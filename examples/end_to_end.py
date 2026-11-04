@@ -34,8 +34,13 @@ def main(out: str) -> int:
     result = run_round(cf, untraceable, policy, web.fetcher(policy), DemoJudge(), state)
     print(summarize(result.results, state, uncovered_sentences(cf)))
     print("Contacted:", web.contacted, "| forum resolved:", "forum.example" in web.resolved)
-    html = render_report(cf.text, result.results, title="Sources + FactCheck end to end", rounds=[result.corrections],
-                       judge_note="Offline demo: invented pages, word-overlap judge (not a model).")
+    html = render_report(
+        cf.text,
+        result.results,
+        title="Sources + FactCheck end to end",
+        rounds=[result.corrections],
+        judge_note="Offline demo: invented pages, word-overlap judge (not a model).",
+    )
     Path(out).write_text(html, encoding="utf-8")
     print("Report:", out)
     return 0

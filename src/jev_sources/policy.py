@@ -31,7 +31,18 @@ JUR_RE = re.compile(r"^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})?$")
 NOTE_MAX = 200
 
 _POLICY_KEYS = {"name", "version", "jurisdictions", "allow_archives", "web_search"}
-_RULE_KEYS = {"id", "host", "suffix", "subdomains", "prefix", "docset", "jurisdiction", "canonical", "note", "allow_http"}
+_RULE_KEYS = {
+    "id",
+    "host",
+    "suffix",
+    "subdomains",
+    "prefix",
+    "docset",
+    "jurisdiction",
+    "canonical",
+    "note",
+    "allow_http",
+}
 _DOCSET_KEYS = {"id", "root", "files", "note"}
 _CHANGELOG_KEYS = {"version", "date", "note"}
 
@@ -160,8 +171,10 @@ def _parse_rule(table: Any, effect: str, index: int, errors: list[str]) -> Rule 
         if "." not in host:
             errors.append(f"{where}.host: {host!r} has no dot; give a full domain such as example.org")
         if table.get("subdomains") is True and is_multi_tenant(host):
-            errors.append(f"{where}.host: {host!r} hands subdomains to unrelated people, so subdomains = true would approve all of them; "
-                          f"name the exact host you mean (for example 'yourname.{host}') or use a prefix")
+            errors.append(
+                f"{where}.host: {host!r} hands subdomains to unrelated people, so subdomains = true would approve all of them; "
+                f"name the exact host you mean (for example 'yourname.{host}') or use a prefix"
+            )
         canon = table.get("canonical", "")
         if canon:
             try:
@@ -177,10 +190,15 @@ def _parse_rule(table: Any, effect: str, index: int, errors: list[str]) -> Rule 
             errors.append(f"{where}.suffix: {exc.detail or exc.code} (got {table['suffix']!r})")
             return None
         if table.get("subdomains") is not None:
-            errors.append(f"{where}: 'subdomains' does not apply to a suffix rule (it always covers everything under the suffix)")
+            errors.append(
+                f"{where}: 'subdomains' does not apply to a suffix rule (it always covers everything under the suffix)"
+            )
         if is_multi_tenant(suf) or not is_icann_suffix(suf):
-            why = ("a private platform suffix that hands names to unrelated customers" if is_multi_tenant(suf)
-                   else "not a registry-controlled public suffix in the bundled Public Suffix List (ICANN section)")
+            why = (
+                "a private platform suffix that hands names to unrelated customers"
+                if is_multi_tenant(suf)
+                else "not a registry-controlled public suffix in the bundled Public Suffix List (ICANN section)"
+            )
             errors.append(f"{where}.suffix: {suf!r} is {why}; use host = ... for one organisation")
             return None
         return Rule(kind="domain", host=suf, subdomains=True, suffix=True, **common)
@@ -191,7 +209,9 @@ def _parse_rule(table: Any, effect: str, index: int, errors: list[str]) -> Rule 
             errors.append(f"{where}.prefix: {exc.detail or exc.code} (got {table['prefix']!r})")
             return None
         if c.kind != "web" or c.query or c.wrapper:
-            errors.append(f"{where}.prefix: must be a plain http(s) URL without a query string, not an archive or redirect URL")
+            errors.append(
+                f"{where}.prefix: must be a plain http(s) URL without a query string, not an archive or redirect URL"
+            )
             return None
         return Rule(kind="url_prefix", host=c.host, prefix_path=c.path.rstrip("/"), prefix_scheme=c.scheme, **common)
     ds = table["docset"]
@@ -219,7 +239,9 @@ def _parse_docset(table: Any, base: Path, index: int, errors: list[str]) -> DocS
         return None
     files = table.get("files", {})
     if not isinstance(files, dict) or not files:
-        errors.append(f"{where}.files: a table of 'relative/path' = 'sha256' is required (create it with: python -m jev_sources hash <folder>)")
+        errors.append(
+            f"{where}.files: a table of 'relative/path' = 'sha256' is required (create it with: python -m jev_sources hash <folder>)"
+        )
         return None
     clean: dict[str, str] = {}
     for rel, digest in files.items():
@@ -241,27 +263,39 @@ def _overlap_warnings(policy: Policy) -> list[str]:
         if a.suffix or b.suffix:
             s_, o = (a, b) if a.suffix else (b, a)
             return o.host.endswith("." + s_.host)
-        host_hit = a.host == b.host or (a.subdomains and b.host.endswith("." + a.host)) or (b.subdomains and a.host.endswith("." + b.host))
+        host_hit = (
+            a.host == b.host
+            or (a.subdomains and b.host.endswith("." + a.host))
+            or (b.subdomains and a.host.endswith("." + b.host))
+        )
         if not host_hit:
             return False
         ap, bp = (a.prefix_path if a.kind == "url_prefix" else ""), (b.prefix_path if b.kind == "url_prefix" else "")
         return ap == bp or bp.startswith(ap + "/") or ap.startswith(bp + "/") or not ap or not bp
 
-    def _inside(d: Rule, a: Rule) -> bool:  # is everything the deny matches already inside the allow? (an intended carve-out)
+    def _inside(
+        d: Rule, a: Rule
+    ) -> bool:  # is everything the deny matches already inside the allow? (an intended carve-out)
         if a.kind == "docset" or d.kind == "docset":
             return False
         if not (d.host == a.host or (a.subdomains and d.host.endswith("." + a.host))):
             return False
         if a.kind == "domain":
             return d.kind == "url_prefix" or d.host != a.host
-        return d.kind == "url_prefix" and (d.prefix_path == a.prefix_path or d.prefix_path.startswith(a.prefix_path + "/"))
+        return d.kind == "url_prefix" and (
+            d.prefix_path == a.prefix_path or d.prefix_path.startswith(a.prefix_path + "/")
+        )
 
     for d in policy.denies:
         for a in policy.allows:
             if overlaps(a, d) and _inside(d, a):
-                out.append(f"overlap (carve-out): deny {d.id!r} ({d.describe()}) removes part of allow {a.id!r} ({a.describe()}); deny wins")
+                out.append(
+                    f"overlap (carve-out): deny {d.id!r} ({d.describe()}) removes part of allow {a.id!r} ({a.describe()}); deny wins"
+                )
             elif overlaps(a, d):
-                out.append(f"overlap: allow {a.id!r} ({a.describe()}) and deny {d.id!r} ({d.describe()}) both match some URLs; deny wins")
+                out.append(
+                    f"overlap: allow {a.id!r} ({a.describe()}) and deny {d.id!r} ({d.describe()}) both match some URLs; deny wins"
+                )
     seen: dict[tuple, str] = {}
     for a in policy.allows:
         key = (a.kind, a.host, a.subdomains, a.prefix_path, a.docset, a.jurisdiction)
@@ -270,15 +304,27 @@ def _overlap_warnings(policy: Policy) -> list[str]:
         seen.setdefault(key, a.id)
     for r in policy.allows:
         if r.suffix:
-            out.append(f"broad: allow {r.id!r} approves EVERY domain registered under {r.host!r}; that is what suffix = means, so keep it for registries that only sell to public bodies")
+            out.append(
+                f"broad: allow {r.id!r} approves EVERY domain registered under {r.host!r}; that is what suffix = means, so keep it for registries that only sell to public bodies"
+            )
         elif r.kind == "domain" and r.subdomains and is_public_suffix(r.host):
-            out.append(f"public-suffix: allow {r.id!r} with subdomains = true on {r.host!r}, which looks like a public suffix; it approves every registrant under it, not one organisation. If that is what you want, write suffix = {r.host!r}")
+            out.append(
+                f"public-suffix: allow {r.id!r} with subdomains = true on {r.host!r}, which looks like a public suffix; it approves every registrant under it, not one organisation. If that is what you want, write suffix = {r.host!r}"
+            )
         elif r.kind == "domain" and not r.subdomains and is_public_suffix(r.host):
-            out.append(f"public-suffix: allow {r.id!r} names {r.host!r}, which looks like a public suffix; did you mean a host below it?")
+            out.append(
+                f"public-suffix: allow {r.id!r} names {r.host!r}, which looks like a public suffix; did you mean a host below it?"
+            )
         elif r.kind == "domain" and user_content_host(r.host):
-            out.append(f"user-content: allow {r.id!r} approves all of {r.host}, where anyone can publish; a 'prefix' rule limits it to one author or project")
+            out.append(
+                f"user-content: allow {r.id!r} approves all of {r.host}, where anyone can publish; a 'prefix' rule limits it to one author or project"
+            )
     used = {r.docset for r in policy.allows if r.kind == "docset"}
-    out += [f"docset {d!r} is defined but no allow rule uses it, so nothing in it can be cited" for d in policy.docsets if d not in used]
+    out += [
+        f"docset {d!r} is defined but no allow rule uses it, so nothing in it can be cited"
+        for d in policy.docsets
+        if d not in used
+    ]
     return out
 
 
@@ -327,7 +373,9 @@ def parse_policy(data: Any, base: Path | None = None, source_path: str = "") -> 
             continue
         entries.append({"version": e["version"], "date": e["date"], "note": _text(e, "note", w, errors)})
     if version != "0.0.0" and not any(e["version"] == version for e in entries):
-        errors.append(f"[[changelog]]: no entry for the current version {version}; every change to the policy needs a changelog line")
+        errors.append(
+            f"[[changelog]]: no entry for the current version {version}; every change to the policy needs a changelog line"
+        )
     rules: list[Rule] = []
     ids: set[str] = set()
     for effect in ("allow", "deny"):
@@ -360,9 +408,17 @@ def parse_policy(data: Any, base: Path | None = None, source_path: str = "") -> 
         errors.append("no [[allow]] rules: with default-deny nothing could ever be cited; add at least one")
     if errors:
         raise PolicyError(errors)
-    policy = Policy(name=name, version=version, rules=rules, docsets=docsets, jurisdictions=tuple(juris),
-                    allow_archives=head.get("allow_archives") is True, web_search=web_search, changelog=entries,
-                    source_path=source_path)
+    policy = Policy(
+        name=name,
+        version=version,
+        rules=rules,
+        docsets=docsets,
+        jurisdictions=tuple(juris),
+        allow_archives=head.get("allow_archives") is True,
+        web_search=web_search,
+        changelog=entries,
+        source_path=source_path,
+    )
     policy.warnings = _overlap_warnings(policy)
     return policy
 

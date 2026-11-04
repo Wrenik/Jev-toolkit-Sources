@@ -30,7 +30,9 @@ def host_possible(policy: Policy, host: str) -> bool:
     for r in policy.allows:
         if not policy.active(r):
             continue
-        if (r.kind == "domain" and ((host == r.host and not r.suffix) or (r.subdomains and host.endswith("." + r.host)))) or (r.kind == "url_prefix" and host == r.host):
+        if (
+            r.kind == "domain" and ((host == r.host and not r.suffix) or (r.subdomains and host.endswith("." + r.host)))
+        ) or (r.kind == "url_prefix" and host == r.host):
             return True
     return policy.allow_archives and host in WRAPPER_HOSTS
 
@@ -40,12 +42,21 @@ class PolicyBlocked(OSError):
 
 
 class GuardedFetcher:
-    def __init__(self, policy: Policy, cache_dir: str | Path | None = None, *, transport=real_transport,
-                 resolver=system_resolver, **kwargs: Any):
+    def __init__(
+        self,
+        policy: Policy,
+        cache_dir: str | Path | None = None,
+        *,
+        transport=real_transport,
+        resolver=system_resolver,
+        **kwargs: Any,
+    ):
         self.policy = policy
         self._block: Decision | None = None
         self.decisions: dict[str, Decision] = {}
-        self._inner = Fetcher(cache_dir, transport=self._guard_transport(transport), resolver=self._guard_resolver(resolver), **kwargs)
+        self._inner = Fetcher(
+            cache_dir, transport=self._guard_transport(transport), resolver=self._guard_resolver(resolver), **kwargs
+        )
 
     # -- hop checks inside the fetcher ----------------------------------------------------------------
     def _guard_resolver(self, resolver):
@@ -135,7 +146,9 @@ class FakeWeb:
 
     def transport(self, target: Target, ip: str, timeout: float) -> FakeResp:
         self.contacted.append(target.url)
-        entry = self.pages.get(target.url) or self.pages.get(canonicalize(target.url).text())  # fixtures are keyed by canonical URL
+        entry = self.pages.get(target.url) or self.pages.get(
+            canonicalize(target.url).text()
+        )  # fixtures are keyed by canonical URL
         if entry is None:
             return FakeResp(404, {"content-type": "text/html"}, b"not found")
         if isinstance(entry, tuple):
@@ -143,6 +156,5 @@ class FakeWeb:
         return FakeResp(200, {"content-type": "text/html; charset=utf-8"}, entry.encode("utf-8"))
 
     def fetcher(self, policy: Policy | None) -> Any:
-        kw = dict(transport=self.transport, resolver=self.resolver, per_host_delay=0)
+        kw: dict[str, Any] = dict(transport=self.transport, resolver=self.resolver, per_host_delay=0)
         return GuardedFetcher(policy, **kw) if policy is not None else Fetcher(**kw)
-

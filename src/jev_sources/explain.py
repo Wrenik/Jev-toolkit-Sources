@@ -51,5 +51,7 @@ def explain(policy: Policy, url: str) -> str:
         out.append(f"  {'MATCH   ' if hit else 'no match'} {rule.effect:5} {rule.id}: {rule.describe()}{extra}")
     out += ["", f"Decision:   {'ALLOWED' if d.allowed else 'REJECTED'} by {d.rule_id}", f"            {d.message}"]
     if not d.allowed and d.code == "not_on_allowlist":
-        out.append("            To allow it, a person adds an [[allow]] rule, bumps the policy version and adds a changelog line.")
+        out.append(
+            "            To allow it, a person adds an [[allow]] rule, bumps the policy version and adds a changelog line."
+        )
     return "\n".join(out)

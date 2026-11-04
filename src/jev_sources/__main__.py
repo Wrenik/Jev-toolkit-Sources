@@ -56,10 +56,14 @@ def _judge(args):
         from jev_core import default_judge
 
         judge = default_judge(VAR, tag="sources", timeout=15, max_retries=0)
-        print(f"Judge: {judge.name} ({judge.model}). Sent per claim: claim, quote and a bounded, redacted passage. Never sent: the policy, URLs, the answer.")
+        print(
+            f"Judge: {judge.name} ({judge.model}). Sent per claim: claim, quote and a bounded, redacted passage. Never sent: the policy, URLs, the answer."
+        )
         return judge
     except JudgeConfigError as exc:
-        print(f"Judge unavailable ({exc}). Falling back to quote matching only; use --demo-judge for the offline heuristic.")
+        print(
+            f"Judge unavailable ({exc}). Falling back to quote matching only; use --demo-judge for the offline heuristic."
+        )
         return None
 
 
@@ -83,8 +87,11 @@ def cmd_validate(args) -> int:
     for w in p.warnings:
         print(("note: " if w.startswith("overlap (carve-out)") else "warning: ") + w)
     from .suffixes import snapshot_info
+
     snap = snapshot_info()
-    print(f"Public Suffix List snapshot: {snap.get('PSL version', '?')} ({snap.get('Rules', '?')} ICANN rules; refresh with tools/update_suffixes.py)")
+    print(
+        f"Public Suffix List snapshot: {snap.get('PSL version', '?')} ({snap.get('Rules', '?')} ICANN rules; refresh with tools/update_suffixes.py)"
+    )
     if p.changelog:
         c = max(p.changelog, key=lambda e: tuple(int(x) for x in e["version"].split(".")))
         print(f"Latest change {c['version']} ({c['date']}): {c['note']}")
@@ -139,8 +146,17 @@ def cmd_check(args) -> int:
     if args.state and Path(args.state).is_file():
         state = LoopState.from_dict(json.loads(Path(args.state).read_text(encoding="utf-8")))
     fetcher = GuardedFetcher(policy, VAR / "sources-cache")
-    out = run_round(cf, untr, policy, fetcher, judge, state, injection_check=default_injection_check(), classify=args.classify,
-                    log_path=VAR / "sources-rounds.jsonl")
+    out = run_round(
+        cf,
+        untr,
+        policy,
+        fetcher,
+        judge,
+        state,
+        injection_check=default_injection_check(),
+        classify=args.classify,
+        log_path=VAR / "sources-rounds.jsonl",
+    )
     if args.state:
         _write(args.state, json.dumps(state.to_dict(), indent=1))
     print(f"Policy: {policy.name} v{policy.version}")
@@ -148,8 +164,13 @@ def cmd_check(args) -> int:
     if out.finished:
         print("Loop finished." + (f" Stopped without approved support: {state.stopped}" if state.stopped else ""))
     else:
-        _write(args.corrections or str(VAR / "sources-corrections.json"), json.dumps(out.corrections, indent=1, ensure_ascii=False))
-        print(f"Round {state.round} of {state.max_rounds}: {len(out.corrections['claims'])} claims need a fix -> {args.corrections or VAR / 'sources-corrections.json'}")
+        _write(
+            args.corrections or str(VAR / "sources-corrections.json"),
+            json.dumps(out.corrections, indent=1, ensure_ascii=False),
+        )
+        print(
+            f"Round {state.round} of {state.max_rounds}: {len(out.corrections['claims'])} claims need a fix -> {args.corrections or VAR / 'sources-corrections.json'}"
+        )
     return 0 if all(r.state in ("supported", "quote_only") for r in out.results) else 1
 
 
@@ -175,7 +196,9 @@ def cmd_fetch(args) -> int:
 
 
 def cmd_hook(args) -> int:
-    code, msg = run_hook(sys.stdin.read(), args.policy or DEFAULT_POLICY, enforce=args.enforce or env_mode(), var_dir=VAR)
+    code, msg = run_hook(
+        sys.stdin.read(), args.policy or DEFAULT_POLICY, enforce=args.enforce or env_mode(), var_dir=VAR
+    )
     if msg:
         print(msg, file=sys.stderr)
     return code
@@ -183,13 +206,21 @@ def cmd_hook(args) -> int:
 
 def cmd_allow_once(args) -> int:
     if not sys.stdin.isatty():
-        print("allow-once needs a person at a terminal (it asks for confirmation); it refuses to run from a script or an agent.", file=sys.stderr)
+        print(
+            "allow-once needs a person at a terminal (it asks for confirmation); it refuses to run from a script or an agent.",
+            file=sys.stderr,
+        )
         return 2
-    if input(f"Allow ONE access to {args.url} for 10 minutes, outside the policy? Type 'yes': ").strip().lower() != "yes":
+    if (
+        input(f"Allow ONE access to {args.url} for 10 minutes, outside the policy? Type 'yes': ").strip().lower()
+        != "yes"
+    ):
         print("Not allowed.")
         return 1
     grant_once(VAR, args.url)
-    print("Granted once. This is a one-off; to approve a source permanently, edit the policy and add a changelog entry.")
+    print(
+        "Granted once. This is a one-off; to approve a source permanently, edit the policy and add a changelog entry."
+    )
     return 0
 
 
@@ -207,7 +238,7 @@ def cmd_eval(args) -> int:
 
         judge = default_judge(VAR, tag="sources-eval", timeout=20, max_retries=0)
         name = f"{judge.name}/{judge.model}"
-    for s in (["dev", "heldout"] if args.set == "all" else [args.set]):
+    for s in ["dev", "heldout"] if args.set == "all" else [args.set]:
         try:
             print(evaluate.format_report(evaluate.run_set(s, judge), name))
         except FileNotFoundError:
@@ -230,12 +261,24 @@ def cmd_demo(args) -> int:
     cf, untr = parse_lenient({"text": text, "claims": claims})
     web = FakeWeb(evaluate.load_web())
     state = LoopState()
-    out = run_round(cf, untr, policy, web.fetcher(policy), DemoJudge(), state, injection_check=default_injection_check())
+    out = run_round(
+        cf, untr, policy, web.fetcher(policy), DemoJudge(), state, injection_check=default_injection_check()
+    )
     print("\n== Round 1: the answer as the model wrote it ==")
     print(summarize(out.results, state, uncovered_sentences(cf)))
     print(f"\nContacted by the fetcher: {web.contacted}")
     print("\n== What the model is told (the corrections file) ==")
-    print(json.dumps({k: out.corrections[k] for k in ("policy", "policy_note")} | {"claims": [{k: e.get(k) for k in ("id", "state", "rule", "instruction")} for e in out.corrections["claims"][:3]]}, indent=1))
+    print(
+        json.dumps(
+            {k: out.corrections[k] for k in ("policy", "policy_note")}
+            | {
+                "claims": [
+                    {k: e.get(k) for k in ("id", "state", "rule", "instruction")} for e in out.corrections["claims"][:3]
+                ]
+            },
+            indent=1,
+        )
+    )
     return 0
 
 
@@ -265,11 +308,15 @@ def main(argv: list[str] | None = None) -> int:
     c.add_argument("claims")
     pol(c)
     c.add_argument("--state")
-    c.add_argument("--corrections", help="where to write the corrections (default JEV_HOME/var/sources-corrections.json)")
+    c.add_argument(
+        "--corrections", help="where to write the corrections (default JEV_HOME/var/sources-corrections.json)"
+    )
     c.add_argument("--max-rounds", type=int, default=3)
     c.add_argument("--no-judge", action="store_true")
     c.add_argument("--demo-judge", action="store_true")
-    c.add_argument("--classify", action="store_true", help="ask the judge for the jurisdiction of untagged sources (flag only)")
+    c.add_argument(
+        "--classify", action="store_true", help="ask the judge for the jurisdiction of untagged sources (flag only)"
+    )
     f = sub.add_parser("filter", help="remove results the policy does not approve (JSON file or - for stdin)")
     f.add_argument("results")
     pol(f)
@@ -277,7 +324,10 @@ def main(argv: list[str] | None = None) -> int:
     g.add_argument("url")
     g.add_argument("--max-chars", type=int, default=20000)
     pol(g)
-    h = sub.add_parser("hook", help="Claude Code PreToolUse hook (stdin JSON). Monitor mode unless --enforce or JEV_SOURCES_MODE=enforce")
+    h = sub.add_parser(
+        "hook",
+        help="Claude Code PreToolUse hook (stdin JSON). Monitor mode unless --enforce or JEV_SOURCES_MODE=enforce",
+    )
     h.add_argument("--enforce", action="store_true")
     pol(h)
     a = sub.add_parser("allow-once", help="a person allows one access outside the policy (needs a terminal)")
@@ -290,10 +340,25 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     try:
         if args.cmd == "prompt":
-            print(PROMPT.replace("{policy}", str(DEFAULT_POLICY)).replace("{corrections}", str(VAR / "sources-corrections.json")))
+            print(
+                PROMPT.replace("{policy}", str(DEFAULT_POLICY)).replace(
+                    "{corrections}", str(VAR / "sources-corrections.json")
+                )
+            )
             return 0
-        return {"demo": cmd_demo, "check": cmd_check, "validate": cmd_validate, "explain": cmd_explain, "init": cmd_init, "filter": cmd_filter, "fetch": cmd_fetch,
-                "hook": cmd_hook, "allow-once": cmd_allow_once, "hash": cmd_hash, "eval": cmd_eval}[args.cmd](args)
+        return {
+            "demo": cmd_demo,
+            "check": cmd_check,
+            "validate": cmd_validate,
+            "explain": cmd_explain,
+            "init": cmd_init,
+            "filter": cmd_filter,
+            "fetch": cmd_fetch,
+            "hook": cmd_hook,
+            "allow-once": cmd_allow_once,
+            "hash": cmd_hash,
+            "eval": cmd_eval,
+        }[args.cmd](args)
     except (PolicyError, SchemaError, OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

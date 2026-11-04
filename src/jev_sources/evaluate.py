@@ -70,11 +70,17 @@ def run_scenario(scn: dict[str, Any], judge: Judge, policy=None) -> Row:
     policy = policy or eval_policy()
     web = FakeWeb(copy.deepcopy(load_web()))
     cf, untr = parse_lenient({"text": "", "claims": scn["claims"]})
-    out = run_round(cf, untr, policy, web.fetcher(policy), judge, LoopState(), injection_check=default_injection_check())
+    out = run_round(
+        cf, untr, policy, web.fetcher(policy), judge, LoopState(), injection_check=default_injection_check()
+    )
     res = out.results[0]
     exp = scn["expect"]
-    got: dict[str, Any] = {"state": res.state, "action": res.action, "reason": res.reason,
-                           "rule": next((f[5:] for f in res.source_flags if f.startswith("rule:")), "")}
+    got: dict[str, Any] = {
+        "state": res.state,
+        "action": res.action,
+        "reason": res.reason,
+        "rule": next((f[5:] for f in res.source_flags if f.startswith("rule:")), ""),
+    }
     problems = []
     if got["state"] != exp["state"]:
         problems.append(f"state {got['state']} != {exp['state']}")
@@ -103,7 +109,15 @@ def run_policy_case(case: dict[str, Any]) -> Row:
         got = "; ".join(exc.errors)
         ok = case["expect_error"] in got
         why = "" if ok else f"error text lacks {case['expect_error']!r}"
-    return Row(case["id"], case["category"], "malformed_policy", ok, {"error_contains": case["expect_error"]}, {"error": got}, why)
+    return Row(
+        case["id"],
+        case["category"],
+        "malformed_policy",
+        ok,
+        {"error_contains": case["expect_error"]},
+        {"error": got},
+        why,
+    )
 
 
 def run_set(name: str, judge: Judge | None = None) -> Report:
@@ -126,7 +140,9 @@ def wilson_lower(k: int, n: int, z: float = 1.96) -> float:
 
 def format_report(rep: Report, judge_name: str) -> str:
     k, n = rep.counts()
-    lines = [f"set {rep.name} (judge: {judge_name}): {k}/{n} scenarios as expected (95% lower bound {wilson_lower(k, n):.0%})"]
+    lines = [
+        f"set {rep.name} (judge: {judge_name}): {k}/{n} scenarios as expected (95% lower bound {wilson_lower(k, n):.0%})"
+    ]
     for layer in ("policy", "judge", "malformed_policy"):
         a, b = rep.counts(layer)
         if b:

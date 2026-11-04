@@ -8,7 +8,10 @@ from jev_sources.policy import parse_policy
 BASE = {
     "policy": {"name": "t", "version": "1.0.0"},
     "changelog": [{"version": "1.0.0", "date": "2026-11-03", "note": "x"}],
-    "allow": [{"id": "law", "host": "lagen.example", "subdomains": True}, {"id": "gov", "prefix": "https://gov.example/law"}],
+    "allow": [
+        {"id": "law", "host": "lagen.example", "subdomains": True},
+        {"id": "gov", "prefix": "https://gov.example/law"},
+    ],
     "deny": [],
 }
 PAGE = "<html><body><p>The notice period is three months.</p></body></html>"
@@ -36,7 +39,9 @@ def test_forbidden_url_is_never_contacted_or_resolved():
 
 
 def test_redirect_from_approved_to_forbidden_is_stopped_before_contacting_it():
-    _, web, f = setup({"https://lagen.example/old": ("redirect", "https://evil.example/new"), "https://evil.example/new": PAGE})
+    _, web, f = setup(
+        {"https://lagen.example/old": ("redirect", "https://evil.example/new"), "https://evil.example/new": PAGE}
+    )
     r = f.fetch("https://lagen.example/old")
     assert r.status == "policy_blocked" and "evil.example" in r.detail
     assert web.contacted == ["https://lagen.example/old"] and "evil.example" not in web.resolved
@@ -44,19 +49,30 @@ def test_redirect_from_approved_to_forbidden_is_stopped_before_contacting_it():
 
 
 def test_redirect_to_other_path_on_prefix_host_is_checked_by_path():
-    _, web, f = setup({"https://gov.example/law/a": ("redirect", "https://gov.example/private"), "https://gov.example/private": PAGE})
+    _, web, f = setup(
+        {"https://gov.example/law/a": ("redirect", "https://gov.example/private"), "https://gov.example/private": PAGE}
+    )
     r = f.fetch("https://gov.example/law/a")
     assert r.status == "policy_blocked" and web.contacted == ["https://gov.example/law/a"]
 
 
 def test_redirect_to_another_approved_page_is_fine():
-    _, web, f = setup({"https://lagen.example/old": ("redirect", "https://www.lagen.example/new"), "https://www.lagen.example/new": PAGE})
+    _, web, f = setup(
+        {
+            "https://lagen.example/old": ("redirect", "https://www.lagen.example/new"),
+            "https://www.lagen.example/new": PAGE,
+        }
+    )
     assert f.fetch("https://lagen.example/old").ok
 
 
 def test_redirect_chain_two_hops_second_forbidden():
-    _, web, f = setup({"https://lagen.example/a": ("redirect", "https://lagen.example/b"),
-                       "https://lagen.example/b": ("redirect", "https://elsewhere.example/c")})
+    _, web, f = setup(
+        {
+            "https://lagen.example/a": ("redirect", "https://lagen.example/b"),
+            "https://lagen.example/b": ("redirect", "https://elsewhere.example/c"),
+        }
+    )
     r = f.fetch("https://lagen.example/a")
     assert r.status == "policy_blocked" and "elsewhere.example" not in web.resolved
 
@@ -76,9 +92,13 @@ def test_cached_chain_is_rechecked_after_policy_change(tmp_path):
     f1.cache_dir = None
     from jev_sources.guarded import GuardedFetcher
 
-    g1 = GuardedFetcher(parse_policy(loose), cache_dir=tmp_path, transport=web.transport, resolver=web.resolver, per_host_delay=0)
+    g1 = GuardedFetcher(
+        parse_policy(loose), cache_dir=tmp_path, transport=web.transport, resolver=web.resolver, per_host_delay=0
+    )
     assert g1.fetch("https://lagen.example/old").ok
-    g2 = GuardedFetcher(parse_policy(BASE), cache_dir=tmp_path, transport=web.transport, resolver=web.resolver, per_host_delay=0)
+    g2 = GuardedFetcher(
+        parse_policy(BASE), cache_dir=tmp_path, transport=web.transport, resolver=web.resolver, per_host_delay=0
+    )
     r = g2.fetch("https://lagen.example/old")  # served from the cache, but the chain is judged again
     assert r.status == "policy_blocked" and "other.example" in r.detail
 

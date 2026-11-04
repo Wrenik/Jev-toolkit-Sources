@@ -7,12 +7,17 @@ import pytest
 from jev_sources.engine import evaluate
 from jev_sources.policy import parse_policy
 
-POLICY = parse_policy({
-    "policy": {"name": "round2", "version": "1.0.0"},
-    "changelog": [{"version": "1.0.0", "date": "2026-11-04"}],
-    "allow": [{"id": "a", "host": "lagen.example", "subdomains": True}, {"id": "b", "prefix": "https://gov.example/law"}],
-    "deny": [{"id": "d", "prefix": "https://lagen.example/private"}],
-})
+POLICY = parse_policy(
+    {
+        "policy": {"name": "round2", "version": "1.0.0"},
+        "changelog": [{"version": "1.0.0", "date": "2026-11-04"}],
+        "allow": [
+            {"id": "a", "host": "lagen.example", "subdomains": True},
+            {"id": "b", "prefix": "https://gov.example/law"},
+        ],
+        "deny": [{"id": "d", "prefix": "https://lagen.example/private"}],
+    }
+)
 DEFAULT = "builtin/default-deny"
 
 H = [

@@ -33,9 +33,13 @@ def filter_results(policy: Policy, items: list[Any]) -> tuple[list[Any], list[tu
     removed: list[tuple[Any, Decision]] = []
     for it in items:
         url = it.get("url") if isinstance(it, dict) else None
-        d = evaluate(policy, url) if isinstance(url, str) else Decision(False, "url_missing", "builtin/url-form", "result has no URL")
+        d = (
+            evaluate(policy, url)
+            if isinstance(url, str)
+            else Decision(False, "url_missing", "builtin/url-form", "result has no URL")
+        )
         (kept if d.allowed else removed).append(it if d.allowed else (it, d))
-    return kept, removed  # type: ignore[return-value]
+    return kept, removed
 
 
 def filter_json(policy: Policy, data: Any, log_path: str | Path | None = None) -> dict[str, Any]:
@@ -48,11 +52,23 @@ def filter_json(policy: Policy, data: Any, log_path: str | Path | None = None) -
         p.parent.mkdir(parents=True, exist_ok=True)
         with p.open("a", encoding="utf-8") as fh:
             for it, d in removed:
-                fh.write(json.dumps({"time": int(time.time()), "policy": f"{policy.name} {policy.version}", "url": str(it.get("url", ""))[:300] if isinstance(it, dict) else "",
-                                     "rule": d.rule_id, "code": d.code}) + "\n")
+                fh.write(
+                    json.dumps(
+                        {
+                            "time": int(time.time()),
+                            "policy": f"{policy.name} {policy.version}",
+                            "url": str(it.get("url", ""))[:300] if isinstance(it, dict) else "",
+                            "rule": d.rule_id,
+                            "code": d.code,
+                        }
+                    )
+                    + "\n"
+                )
     out: dict[str, Any] = {"results": kept, "removed_by_policy": len(removed)}
     if removed:
-        out["note"] = f"{len(removed)} result(s) were removed by the source policy and are not available. Use only the results listed."
+        out["note"] = (
+            f"{len(removed)} result(s) were removed by the source policy and are not available. Use only the results listed."
+        )
     return out
 
 
@@ -111,8 +127,14 @@ def _safe_url(url: str) -> str:
     return url.split("?", 1)[0][:300]  # query strings can carry tokens
 
 
-def run_hook(stdin_text: str, policy_path: str | Path, *, enforce: bool = False, var_dir: str | Path = "var",
-             now: float | None = None) -> tuple[int, str]:
+def run_hook(
+    stdin_text: str,
+    policy_path: str | Path,
+    *,
+    enforce: bool = False,
+    var_dir: str | Path = "var",
+    now: float | None = None,
+) -> tuple[int, str]:
     """Returns (exit code, message for stderr). 0 = let the call through, 2 = block (Claude Code shows stderr to the model)."""
     now = time.time() if now is None else now
     var = Path(var_dir)
@@ -128,21 +150,42 @@ def run_hook(stdin_text: str, policy_path: str | Path, *, enforce: bool = False,
     try:
         policy = load_policy(policy_path)
     except PolicyError as exc:
-        msg = f"jev-sources: the source policy cannot be loaded ({exc.errors[0]}); " + ("all web access is blocked until it is fixed." if enforce else "monitor mode lets the call through.")
-        _log(var, {"time": int(now), "mode": mode, "tool": tool, "decision": "policy_error", "error": exc.errors[0][:200]})
+        msg = f"jev-sources: the source policy cannot be loaded ({exc.errors[0]}); " + (
+            "all web access is blocked until it is fixed." if enforce else "monitor mode lets the call through."
+        )
+        _log(
+            var,
+            {"time": int(now), "mode": mode, "tool": tool, "decision": "policy_error", "error": exc.errors[0][:200]},
+        )
         return (2, msg) if enforce else (0, msg)
     if tool == "WebSearch":
         if policy.web_search == "allow":
             return 0, ""
-        why = ("web search results cannot be filtered by the source policy (policy.web_search = block); "
-               "open approved URLs directly, or run `python -m jev_sources filter` on retrieval results")
+        why = (
+            "web search results cannot be filtered by the source policy (policy.web_search = block); "
+            "open approved URLs directly, or run `python -m jev_sources filter` on retrieval results"
+        )
         _log(var, {"time": int(now), "mode": mode, "tool": tool, "decision": "block", "rule": "builtin/web-search"})
         if enforce and not _consume(var, "websearch", now):
-            return 2, f"Blocked by source policy {policy.name} v{policy.version}: {why}. A person can allow one search: python -m jev_sources allow-once websearch"
+            return (
+                2,
+                f"Blocked by source policy {policy.name} v{policy.version}: {why}. A person can allow one search: python -m jev_sources allow-once websearch",
+            )
         return 0, f"[monitor] jev-sources would block this WebSearch: {why}." if not enforce else ""
     url = str(tin.get("url", ""))
     d = evaluate(policy, url, check_files=False)
-    _log(var, {"time": int(now), "mode": mode, "tool": tool, "url": _safe_url(url), "decision": "allow" if d.allowed else "block", "rule": d.rule_id, "code": d.code})
+    _log(
+        var,
+        {
+            "time": int(now),
+            "mode": mode,
+            "tool": tool,
+            "url": _safe_url(url),
+            "decision": "allow" if d.allowed else "block",
+            "rule": d.rule_id,
+            "code": d.code,
+        },
+    )
     if d.allowed:
         return 0, ""
     line = f"{d.message} A person can allow this once with: python -m jev_sources allow-once {_safe_url(url)}"

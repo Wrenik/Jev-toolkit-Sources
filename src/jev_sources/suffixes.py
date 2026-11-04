@@ -22,21 +22,91 @@ from importlib import resources
 
 # Private suffixes: the owner hands subdomains to unrelated customers. A subdomains=true rule on one of these is refused.
 MULTI_TENANT = {
-    "github.io", "githubusercontent.com", "gitlab.io", "blogspot.com", "blogspot.se", "wordpress.com", "herokuapp.com",
-    "netlify.app", "vercel.app", "pages.dev", "workers.dev", "appspot.com", "web.app", "firebaseapp.com", "azurewebsites.net",
-    "cloudfront.net", "s3.amazonaws.com", "amazonaws.com", "onrender.com", "fly.dev", "glitch.me", "repl.co", "replit.app",
-    "notion.site", "substack.com", "wixsite.com", "weebly.com", "squarespace.com", "myshopify.com", "bitbucket.io",
-    "surge.sh", "ngrok.io", "ngrok-free.app", "trycloudflare.com", "cloudfunctions.net", "run.app", "itch.io", "neocities.org",
-    "000webhostapp.com", "tumblr.com", "livejournal.com", "typepad.com", "hashnode.dev", "dev.to", "medium.com",
+    "github.io",
+    "githubusercontent.com",
+    "gitlab.io",
+    "blogspot.com",
+    "blogspot.se",
+    "wordpress.com",
+    "herokuapp.com",
+    "netlify.app",
+    "vercel.app",
+    "pages.dev",
+    "workers.dev",
+    "appspot.com",
+    "web.app",
+    "firebaseapp.com",
+    "azurewebsites.net",
+    "cloudfront.net",
+    "s3.amazonaws.com",
+    "amazonaws.com",
+    "onrender.com",
+    "fly.dev",
+    "glitch.me",
+    "repl.co",
+    "replit.app",
+    "notion.site",
+    "substack.com",
+    "wixsite.com",
+    "weebly.com",
+    "squarespace.com",
+    "myshopify.com",
+    "bitbucket.io",
+    "surge.sh",
+    "ngrok.io",
+    "ngrok-free.app",
+    "trycloudflare.com",
+    "cloudfunctions.net",
+    "run.app",
+    "itch.io",
+    "neocities.org",
+    "000webhostapp.com",
+    "tumblr.com",
+    "livejournal.com",
+    "typepad.com",
+    "hashnode.dev",
+    "dev.to",
+    "medium.com",
 }
 
 # One host, many authors: allowing the bare host approves every user's content on it.
 USER_CONTENT = {
-    "github.com", "gist.github.com", "raw.githubusercontent.com", "gitlab.com", "bitbucket.org", "medium.com", "reddit.com",
-    "old.reddit.com", "youtube.com", "youtu.be", "x.com", "twitter.com", "facebook.com", "linkedin.com", "pastebin.com",
-    "drive.google.com", "docs.google.com", "sites.google.com", "dropbox.com", "quora.com", "stackoverflow.com",
-    "stackexchange.com", "wikipedia.org", "en.wikipedia.org", "wikia.com", "fandom.com", "scribd.com", "slideshare.net",
-    "archive.org", "huggingface.co", "kaggle.com", "npmjs.com", "pypi.org", "hackmd.io", "notion.so", "substack.com",
+    "github.com",
+    "gist.github.com",
+    "raw.githubusercontent.com",
+    "gitlab.com",
+    "bitbucket.org",
+    "medium.com",
+    "reddit.com",
+    "old.reddit.com",
+    "youtube.com",
+    "youtu.be",
+    "x.com",
+    "twitter.com",
+    "facebook.com",
+    "linkedin.com",
+    "pastebin.com",
+    "drive.google.com",
+    "docs.google.com",
+    "sites.google.com",
+    "dropbox.com",
+    "quora.com",
+    "stackoverflow.com",
+    "stackexchange.com",
+    "wikipedia.org",
+    "en.wikipedia.org",
+    "wikia.com",
+    "fandom.com",
+    "scribd.com",
+    "slideshare.net",
+    "archive.org",
+    "huggingface.co",
+    "kaggle.com",
+    "npmjs.com",
+    "pypi.org",
+    "hackmd.io",
+    "notion.so",
+    "substack.com",
 }
 
 
@@ -75,10 +145,10 @@ def public_suffix(host: str) -> str:
     for i in range(len(labels)):  # longest candidate first; an exception rule beats everything
         cand = ".".join(labels[i:])
         if cand in exc:
-            return ".".join(labels[i + 1:])
+            return ".".join(labels[i + 1 :])
     for i in range(len(labels)):
         cand = ".".join(labels[i:])
-        parent = ".".join(labels[i + 1:])
+        parent = ".".join(labels[i + 1 :])
         if cand in plain or (parent and parent in wild):
             return cand
     return labels[-1]

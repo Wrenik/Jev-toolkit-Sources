@@ -25,11 +25,19 @@ def pol(*rules, **extra):
     return parse_policy(d)
 
 
-@pytest.mark.parametrize("host,suffix,reg", [
-    ("co.uk", "co.uk", ""), ("legislation.gov.uk", "gov.uk", "legislation.gov.uk"), ("a.b.example.co.uk", "co.uk", "example.co.uk"),
-    ("foo.ck", "foo.ck", ""), ("www.ck", "ck", "www.ck"),  # wildcard *.ck and exception !www.ck
-    ("city.kobe.jp", "kobe.jp", "city.kobe.jp"), ("example.com", "com", "example.com"), ("x.invalidtld", "invalidtld", "x.invalidtld"),
-])
+@pytest.mark.parametrize(
+    "host,suffix,reg",
+    [
+        ("co.uk", "co.uk", ""),
+        ("legislation.gov.uk", "gov.uk", "legislation.gov.uk"),
+        ("a.b.example.co.uk", "co.uk", "example.co.uk"),
+        ("foo.ck", "foo.ck", ""),
+        ("www.ck", "ck", "www.ck"),  # wildcard *.ck and exception !www.ck
+        ("city.kobe.jp", "kobe.jp", "city.kobe.jp"),
+        ("example.com", "com", "example.com"),
+        ("x.invalidtld", "invalidtld", "x.invalidtld"),
+    ],
+)
 def test_psl_algorithm(host, suffix, reg):
     assert public_suffix(host) == suffix and registrable_domain(host) == reg
 
@@ -38,6 +46,7 @@ def test_snapshot_is_dated_and_compact():
     info = snapshot_info()
     assert info["PSL version"][:4].isdigit() and int(info["Rules"]) > 6000
     from importlib import resources
+
     assert len(resources.files("jev_sources").joinpath("data/public_suffix_icann.dat").read_bytes()) < 300_000
 
 
@@ -73,7 +82,12 @@ def test_deny_suffix_beats_allow_and_old_warning_points_to_suffix():
 
 def test_redirect_from_suffix_site_to_off_policy_host_is_stopped():
     p = pol({"id": "gov", "suffix": "gov.uk"})
-    web = FakeWeb({"https://legislation.gov.uk/a": ("redirect", "https://gov.uk.evil.test/b"), "https://gov.uk.evil.test/b": "<p>x</p>"})
+    web = FakeWeb(
+        {
+            "https://legislation.gov.uk/a": ("redirect", "https://gov.uk.evil.test/b"),
+            "https://gov.uk.evil.test/b": "<p>x</p>",
+        }
+    )
     r = web.fetcher(p).fetch("https://legislation.gov.uk/a")
     assert r.status == "policy_blocked"
     assert not any("evil.test" in u for u in web.contacted) and "gov.uk.evil.test" not in web.resolved
@@ -84,8 +98,10 @@ def test_redirect_from_suffix_site_to_off_policy_host_is_stopped():
 
 def _docset_policy(tmp_path, root_text, folder):
     sha = hashlib.sha256(b"Leave is 25 days.").hexdigest()
-    toml = (f'[policy]\nname = "d"\nversion = "1.0.0"\n[[changelog]]\nversion = "1.0.0"\ndate = "2026-11-04"\n'
-            f'[[allow]]\nid = "hr"\ndocset = "hr"\n[[docset]]\nid = "hr"\nroot = "{root_text}"\nfiles = {{ "a.md" = "{sha}" }}\n')
+    toml = (
+        f'[policy]\nname = "d"\nversion = "1.0.0"\n[[changelog]]\nversion = "1.0.0"\ndate = "2026-11-04"\n'
+        f'[[allow]]\nid = "hr"\ndocset = "hr"\n[[docset]]\nid = "hr"\nroot = "{root_text}"\nfiles = {{ "a.md" = "{sha}" }}\n'
+    )
     pf = tmp_path / "pol" / "p.toml"
     pf.parent.mkdir(exist_ok=True)
     pf.write_text(toml, encoding="utf-8")
@@ -101,7 +117,13 @@ def test_relative_root_is_relative_to_the_policy_file_not_the_working_directory(
     other.mkdir()
     monkeypatch.chdir(other)
     assert evaluate(p, "docset:hr/a.md").allowed
-    for ref in ("docset:hr/../p.toml", "docset:hr/./a.md", "docset:hr//a.md", "docset:hr/a.md%2e", "docset:hr/%2e%2e/a.md"):
+    for ref in (
+        "docset:hr/../p.toml",
+        "docset:hr/./a.md",
+        "docset:hr//a.md",
+        "docset:hr/a.md%2e",
+        "docset:hr/%2e%2e/a.md",
+    ):
         assert not evaluate(p, ref).allowed, ref
 
 
@@ -146,6 +168,7 @@ def test_symlinked_folder_inside_the_docset_is_refused_and_a_symlinked_root_is_r
 def test_end_to_end_example_names_the_rule_in_the_html_report(tmp_path):
     import runpy
     from pathlib import Path
+
     script = Path(__file__).resolve().parent.parent / "examples" / "end_to_end.py"
     if not script.exists():
         pytest.skip("examples/ not in this checkout")

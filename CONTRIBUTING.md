@@ -8,3 +8,5 @@ Thanks for looking. This is a small learning project, so the bar is "clear and h
 4. Keep documentation claims measured: say what was tested, on how many cases, and what the limits are.
 5. Never use the Jev SDK directly (it lives in Jev-toolkit-usage, `jev_core`); talk to the `Judge` interface. Import from `jev_factcheck` only through its modules `checker`, `fetch`, `htmltext`, `netguard`, `judging`, `loop`, `schema`, `verdict`, `demojudge`.
 6. Evaluation: add new scenarios to a **new** held-out set; never tune rules on a set you report on. `evalset/heldout.json` was run once before any fix; if you change rules because of it, say so and make a fresh set.
+
+Style and types: `python -m ruff format . && python -m ruff check . && python -m mypy` must pass (CI runs the same checks on Linux, Windows and macOS, Python 3.11 and 3.13). Install the tools with `pip install -e ".[dev]"`.
