@@ -1,4 +1,4 @@
-"""CLI: python -m jev_sources {demo,check,validate,filter,fetch,hook,allow-once,hash,eval,prompt}. See docs/SOURCE_RESTRICTION.md."""
+"""CLI: python -m jev_sources {demo,init,validate,explain,check,filter,fetch,hook,allow-once,hash,eval,prompt}. See docs/SOURCE_RESTRICTION.md."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from . import evaluate
 from .check import parse_lenient, run_round, summarize, uncovered_sentences
 from .engine import evaluate as decide
 from .engine import sha256_manifest
+from .explain import explain
 from .guarded import FakeWeb, GuardedFetcher
 from .policy import PolicyError, load_policy
 from .prefilter import env_mode, filter_json, grant_once, run_hook
@@ -80,10 +81,49 @@ def cmd_validate(args) -> int:
     for line in p.allowed_summary(50):
         print(f"  - {line}")
     for w in p.warnings:
-        print(f"warning: {w}")
+        print(("note: " if w.startswith("overlap (carve-out)") else "warning: ") + w)
     if p.changelog:
-        c = max(p.changelog, key=lambda e: e["version"].split("."))
+        c = max(p.changelog, key=lambda e: tuple(int(x) for x in e["version"].split(".")))
         print(f"Latest change {c['version']} ({c['date']}): {c['note']}")
+    return 0
+
+
+def cmd_explain(args) -> int:
+    print(explain(_policy(args), args.url))
+    return 0
+
+
+def cmd_init(args) -> int:
+    import datetime
+    import importlib.resources as res
+    import os
+
+    folder = res.files("jev_sources").joinpath("templates")
+    names = sorted(t.name[:-5] for t in folder.iterdir() if t.name.endswith(".toml"))
+    if args.template not in names:
+        print(f"error: unknown template {args.template!r}; choose one of: {', '.join(names)}", file=sys.stderr)
+        return 2
+    text = folder.joinpath(args.template + ".toml").read_text(encoding="utf-8")
+    text = text.replace("@DATE@", datetime.date.today().isoformat())
+    out = Path(args.out)
+    if args.template == "offline-corpus":
+        if not args.docs:
+            print("error: offline-corpus needs --docs <folder with your documents>", file=sys.stderr)
+            return 2
+        manifest = sha256_manifest(args.docs)
+        if not manifest:
+            print(f"error: no .txt/.md/.html files found in {args.docs}", file=sys.stderr)
+            return 2
+        root = os.path.relpath(Path(args.docs).resolve(), out.resolve().parent).replace(chr(92), "/")
+        text = text.replace("@ROOT@", root).replace("@FILES@", "\n".join(f'"{k}" = "{v}"' for k, v in manifest.items()))
+    if out.exists() and not args.force:
+        print(f"error: {out} exists; use --force to overwrite", file=sys.stderr)
+        return 2
+    _write(str(out), text)
+    p = load_policy(out)
+    print(f"Wrote {out} ({len(p.rules)} rules). Edit it, then: python -m jev_sources validate --policy {out}")
+    for w in p.warnings:
+        print(("note: " if w.startswith("overlap (carve-out)") else "warning: ") + w)
     return 0
 
 
@@ -210,6 +250,14 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("prompt", help="print the instructions to give Claude Code")
     v = sub.add_parser("validate", help="load a policy, print what it allows and any warnings")
     pol(v)
+    ex = sub.add_parser("explain", help="show step by step why a URL is allowed or rejected (offline)")
+    ex.add_argument("url")
+    pol(ex)
+    i = sub.add_parser("init", help="write a starter policy: docs-only, gov-sources or offline-corpus")
+    i.add_argument("template")
+    i.add_argument("--out", default="policy.toml")
+    i.add_argument("--docs", help="offline-corpus: the folder of documents to pin")
+    i.add_argument("--force", action="store_true")
     c = sub.add_parser("check", help="check a claims.json against the policy")
     c.add_argument("claims")
     pol(c)
@@ -241,7 +289,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "prompt":
             print(PROMPT.replace("{policy}", str(DEFAULT_POLICY)).replace("{corrections}", str(VAR / "sources-corrections.json")))
             return 0
-        return {"demo": cmd_demo, "check": cmd_check, "validate": cmd_validate, "filter": cmd_filter, "fetch": cmd_fetch,
+        return {"demo": cmd_demo, "check": cmd_check, "validate": cmd_validate, "explain": cmd_explain, "init": cmd_init, "filter": cmd_filter, "fetch": cmd_fetch,
                 "hook": cmd_hook, "allow-once": cmd_allow_once, "hash": cmd_hash, "eval": cmd_eval}[args.cmd](args)
     except (PolicyError, SchemaError, OSError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)

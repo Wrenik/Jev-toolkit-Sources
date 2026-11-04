@@ -1,0 +1,37 @@
+# Policy: official government and legislation sources only, with jurisdictions you can switch on and off.
+# The sites below are examples of public-sector sites; check each one before you trust it, then edit.
+# `jurisdictions` switches off every rule tagged with another jurisdiction (it is rejected, with that reason).
+
+[policy]
+name = "gov-sources"
+version = "1.0.0"
+jurisdictions = ["SE", "EU"]      # remove "EU" or add "UK" and the matching rules switch off or on
+
+[[changelog]]
+version = "1.0.0"
+date = "@DATE@"
+note = "First version: Swedish and EU legislation sites."
+
+[[allow]]
+id = "riksdagen"
+host = "riksdagen.se"
+subdomains = true                 # data.riksdagen.se, www.riksdagen.se, ...
+jurisdiction = "SE"
+
+[[allow]]
+id = "eur-lex"
+host = "eur-lex.europa.eu"
+jurisdiction = "EU"
+
+[[allow]]
+id = "legislation-uk"
+host = "legislation.gov.uk"       # one real host UNDER the gov.uk suffix; "gov.uk" with subdomains would approve every UK site
+jurisdiction = "UK"               # inactive here because "UK" is not in `jurisdictions` above
+
+# Archive.org / cache / translate copies are rejected by default ("cite the original page").
+# Set allow_archives = true under [policy] only if you need them; the wrapped original must then pass too.
+
+[[deny]]
+id = "no-press"
+prefix = "https://www.riksdagen.se/sv/press"
+note = "Press releases are not law."

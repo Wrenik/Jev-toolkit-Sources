@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .suffixes import is_multi_tenant, is_public_suffix, user_content_host
 from .urlcanon import UrlRejected, canonical_host, canonicalize
 
 ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,39}$")
@@ -155,6 +156,9 @@ def _parse_rule(table: Any, effect: str, index: int, errors: list[str]) -> Rule 
             return None
         if "." not in host:
             errors.append(f"{where}.host: {host!r} has no dot; give a full domain such as example.org")
+        if table.get("subdomains") is True and is_multi_tenant(host):
+            errors.append(f"{where}.host: {host!r} hands subdomains to unrelated people, so subdomains = true would approve all of them; "
+                          f"name the exact host you mean (for example 'yourname.{host}') or use a prefix")
         canon = table.get("canonical", "")
         if canon:
             try:
@@ -223,9 +227,20 @@ def _overlap_warnings(policy: Policy) -> list[str]:
         ap, bp = (a.prefix_path if a.kind == "url_prefix" else ""), (b.prefix_path if b.kind == "url_prefix" else "")
         return ap == bp or bp.startswith(ap + "/") or ap.startswith(bp + "/") or not ap or not bp
 
+    def _inside(d: Rule, a: Rule) -> bool:  # is everything the deny matches already inside the allow? (an intended carve-out)
+        if a.kind == "docset" or d.kind == "docset":
+            return False
+        if not (d.host == a.host or (a.subdomains and d.host.endswith("." + a.host))):
+            return False
+        if a.kind == "domain":
+            return d.kind == "url_prefix" or d.host != a.host
+        return d.kind == "url_prefix" and (d.prefix_path == a.prefix_path or d.prefix_path.startswith(a.prefix_path + "/"))
+
     for d in policy.denies:
         for a in policy.allows:
-            if overlaps(a, d):
+            if overlaps(a, d) and _inside(d, a):
+                out.append(f"overlap (carve-out): deny {d.id!r} ({d.describe()}) removes part of allow {a.id!r} ({a.describe()}); deny wins")
+            elif overlaps(a, d):
                 out.append(f"overlap: allow {a.id!r} ({a.describe()}) and deny {d.id!r} ({d.describe()}) both match some URLs; deny wins")
     seen: dict[tuple, str] = {}
     for a in policy.allows:
@@ -233,6 +248,13 @@ def _overlap_warnings(policy: Policy) -> list[str]:
         if key in seen:
             out.append(f"duplicate: allow {a.id!r} repeats {seen[key]!r}")
         seen.setdefault(key, a.id)
+    for r in policy.allows:
+        if r.kind == "domain" and r.subdomains and is_public_suffix(r.host):
+            out.append(f"public-suffix: allow {r.id!r} with subdomains = true on {r.host!r}, which looks like a public suffix; it approves every registrant under it, not one organisation")
+        elif r.kind == "domain" and not r.subdomains and is_public_suffix(r.host):
+            out.append(f"public-suffix: allow {r.id!r} names {r.host!r}, which looks like a public suffix; did you mean a host below it?")
+        elif r.kind == "domain" and user_content_host(r.host):
+            out.append(f"user-content: allow {r.id!r} approves all of {r.host}, where anyone can publish; a 'prefix' rule limits it to one author or project")
     used = {r.docset for r in policy.allows if r.kind == "docset"}
     out += [f"docset {d!r} is defined but no allow rule uses it, so nothing in it can be cited" for d in policy.docsets if d not in used]
     return out

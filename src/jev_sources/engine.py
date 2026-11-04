@@ -47,8 +47,8 @@ def _match(rule: Rule, c: Canon, fold: bool = False) -> bool:
     if c.host != rule.host:
         return False
     p, rp = (c.path.rstrip("/") or ""), rule.prefix_path
-    if fold:
-        p, rp = p.lower(), rp.lower()
+    if fold:  # also drop ";param" suffixes per segment: Tomcat and others read /private;x=1 as /private
+        p, rp = "/".join(seg.split(";", 1)[0] for seg in p.lower().split("/")), rp.lower()
     # the bare prefix itself (".../law" for prefix ".../law/") counts as the directory and is matched deliberately
     return rp == "" or p == rp or p.startswith(rp + "/")
 
@@ -61,11 +61,13 @@ def _deny(policy: Policy, code: str, rule_id: str, why: str, c: Canon | None, ur
 
 def _near_miss(policy: Policy, host: str) -> str:
     hosts = sorted({r.host for r in policy.allows if r.host and policy.active(r)})
+    if host in hosts:
+        return ""
     close = difflib.get_close_matches(host, hosts, n=1, cutoff=NEAR_MISS_RATIO)
     for h in hosts:  # a host that merely contains an allowed name, e.g. allowed.example.evil.example
-        if h != host and (h in host.split("/")[0]) and host != h and not host.endswith("." + h):
+        if host.startswith(h + ".") or (h in host and not host.endswith("." + h)):
             close = [h]
-    return f" It looks similar to the allowed host {close[0]} but is a different host." if close else ""
+    return f"; it looks similar to the allowed host {close[0]} but is a different host" if close else ""
 
 
 def evaluate(policy: Policy, url: str, *, check_files: bool = True, _depth: int = 0) -> Decision:
@@ -89,8 +91,8 @@ def _evaluate_canon(policy: Policy, c: Canon, check_files: bool, depth: int) -> 
             if not inner.allowed:
                 inner.message = f"Wrapped URL ({c.host}) -> " + inner.message
             return inner
-        if c.port not in (80, 443):
-            return _deny(policy, "port", "builtin/port", f"port {c.port} is not allowed (only the default web ports)", c)
+        if c.port != (443 if c.scheme == "https" else 80):
+            return _deny(policy, "port", "builtin/port", f"port {c.port} is not allowed for {c.scheme} (only its default port)", c)
     for rule in policy.denies:
         if _match(rule, c, fold=True):
             allow_also = [r.id for r in policy.allows if _match(r, c)]
@@ -105,6 +107,8 @@ def _evaluate_canon(policy: Policy, c: Canon, check_files: bool, depth: int) -> 
         if c.kind == "web":
             if c.non_ascii_host:
                 why += f"; the host contains non-ASCII characters and is {c.host} in its real form, which may be a lookalike"
+            if any(r.host == c.host and r.kind == "url_prefix" and policy.active(r) for r in policy.allows):
+                why += f"; the host {c.host} has approved path prefixes, but this path is under none of them"
             why += _near_miss(policy, c.host)
         return _deny(policy, "not_on_allowlist", "builtin/default-deny", why, c)
     active = [r for r in matched if policy.active(r)]

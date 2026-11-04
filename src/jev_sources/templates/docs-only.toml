@@ -1,0 +1,30 @@
+# Policy: answers may be backed ONLY by the documentation of one project (and nothing else on the internet).
+# Edit the hosts, bump `version` and add a [[changelog]] line whenever you change anything.
+# Check it:    python -m jev_sources validate --policy docs-only.toml
+# Try a URL:   python -m jev_sources explain https://docs.python.org/3/library/json.html --policy docs-only.toml
+
+[policy]
+name = "docs-only"
+version = "1.0.0"
+
+[[changelog]]
+version = "1.0.0"
+date = "@DATE@"
+note = "First version: the official Python documentation only."
+
+# A path prefix, not the whole host. It matches whole path segments: /3/library is approved, /3library is not.
+[[allow]]
+id = "python-docs"
+prefix = "https://docs.python.org/3"
+note = "Official Python 3 documentation."
+
+# The project's enhancement-proposal site: exact host only (www.python.org is NOT included unless you list it).
+[[allow]]
+id = "python-peps"
+host = "peps.python.org"
+
+# A deny rule always wins over an allow rule. Example: keep one part out.
+[[deny]]
+id = "no-changelog"
+prefix = "https://docs.python.org/3/whatsnew/changelog"
+note = "Auto-generated; too noisy to cite."

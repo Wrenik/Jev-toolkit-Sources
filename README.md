@@ -17,16 +17,19 @@ With the judge on, per claim whose quote was found in an *approved* source, the 
 
 ## Install
 
-Requires Python 3.11+. Until the repositories are public, install the siblings from local clones:
+Requires Python 3.11+. Until the repositories are public, install the siblings from local clones. Make the virtual environment **outside** the clones (or anywhere you like):
 
 ```bash
-python -m venv .venv
-.venv/Scripts/python -m pip install -e ../Jev-toolkit-usage          # Windows; use .venv/bin/python elsewhere
-.venv/Scripts/python -m pip install -e ../Jev-toolkit-FactCheck --no-deps
-.venv/Scripts/python -m pip install -e ".[dev]" --no-deps
+python -m venv ~/jev-venv
+# Windows: ~/jev-venv/Scripts/python   Linux/macOS: ~/jev-venv/bin/python
+PY=~/jev-venv/Scripts/python
+$PY -m pip install -e ./Jev-toolkit-usage
+$PY -m pip install -e ./Jev-toolkit-FactCheck --no-deps
+$PY -m pip install -e ./Jev-toolkit-Sources --no-deps
+$PY -m jev_sources demo
 ```
 
-Once public: `pip install "jev-toolkit-sources @ git+https://github.com/Wrenik/Jev-toolkit-Sources.git"` (pulls in both dependencies). Data (logs, cache, your policy file) lives in `JEV_HOME` (default `~/.jev-toolkit`, under `var/`); a `.env` with `TYPESAFE_API_KEY` there is only needed for the real judge. CI checks out both dependency repos and installs them editable.
+Once public: `pip install "jev-toolkit-sources @ git+https://github.com/Wrenik/Jev-toolkit-Sources.git"` (pulls in both dependencies). Data (logs, cache, your default policy file) lives in `JEV_HOME` (default `~/.jev-toolkit`, under `var/`); a `.env` with `TYPESAFE_API_KEY` there is only needed for the real judge. CI checks out both dependency repos and installs them editable.
 
 ## Try it in 60 seconds (offline, no key)
 
@@ -36,7 +39,29 @@ python -m jev_sources eval        # dev + held-out sets with the word-overlap ba
 python -m jev_sources prompt      # the instructions to paste into Claude Code
 ```
 
-Real use, policy format, URL handling, the hook and the evaluation: [docs/SOURCE_RESTRICTION.md](docs/SOURCE_RESTRICTION.md).
+## Write your own policy (5 minutes)
+
+```bash
+python -m jev_sources init docs-only --out policy.toml     # or gov-sources, or: offline-corpus --docs ./my-notes
+python -m jev_sources validate --policy policy.toml        # every problem at once, naming the rule; warnings for risky rules
+python -m jev_sources explain "https://docs.python.org/3library/x" --policy policy.toml
+python -m jev_sources fetch  "https://docs.python.org/3/library/json.html" --policy policy.toml
+```
+
+`explain` never touches the network. It shows the canonical form of the URL, which rules matched and why the others did not, and the decision:
+
+```
+Input:      https://docs.python.org/3library/x
+Canonical:  https://docs.python.org/3library/x
+Rules:
+  no match deny  no-changelog: URLs under https://docs.python.org/3/whatsnew/changelog/  (path /3library/x is not under /3/whatsnew/changelog ...)
+  no match allow python-docs: URLs under https://docs.python.org/3/  (path /3library/x is not under /3 (a prefix matches whole path segments only))
+
+Decision:   REJECTED by builtin/default-deny
+            Rejected by rule builtin/default-deny: docs.python.org is not on the allowlist (default is deny); the host docs.python.org has approved path prefixes, but this path is under none of them. Allowed instead: ...
+```
+
+Starter policies are in `src/jev_sources/templates/` (`docs-only`, `gov-sources`, `offline-corpus`). The policy format, URL handling, the hook and the evaluation: [docs/SOURCE_RESTRICTION.md](docs/SOURCE_RESTRICTION.md). Release history: [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

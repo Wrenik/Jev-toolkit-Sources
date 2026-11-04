@@ -100,8 +100,12 @@ Rules are never matched against the raw string. Every URL is canonicalised first
 | `allowed.example.evil.example`, `allowed.example.com`, `notallowed.example` | not a match (exact or dot-anchored suffix only); the message adds "looks similar to the allowed host ..." |
 | IDN / homoglyph (Cyrillic `а` in `lаgen`) | converted to punycode, so it differs from the allowed host; message says the host has non-ASCII characters and may be a lookalike |
 | uppercase, trailing dot, default port, fragment | normalised away (`LAGEN.EXAMPLE.:443/x#f` = `lagen.example/x`) |
-| non-default port (`:8443`) | rejected (`builtin/port`) |
+| any port but the scheme's own default (`:8443`, and `https://host:80/`), port `0` | rejected (`builtin/port`, `bad_port`) |
 | `http://` | rejected unless the rule says `allow_http = true` |
+| `straße.example` (IDNA 2003 would silently turn it into `strasse.example`, a different domain), `ⓐ`-style compatibility characters, `。` | rejected as `ambiguous_idna_host`: write the `xn--` form of the host you mean. Python's built-in codec is IDNA 2003 and browsers use IDNA 2008, so a name that does not survive the round trip is refused instead of guessed |
+| `/private;jsessionid=1` against a deny on `/private` | deny rules ignore `;parameters` on each path segment (Tomcat and others serve it as `/private`) |
+| `/private%00` | rejected: a percent-encoded control character in the path |
+| more than one trailing dot (`host..`) | rejected as malformed (one trailing dot is the DNS root and is dropped) |
 | `/law` vs `/lawyer`, `/law/../private` | prefix match is on a path-segment boundary after dot-segment resolution; the bare `/law` (no trailing slash) is deliberately treated as the directory itself and matches prefix `/law/` |
 | `/Private/` vs deny prefix `/private/` | **deny** rules compare paths case-insensitively (IIS, Windows and some CMSs serve both as one resource, so case must not bypass a deny); **allow** rules stay case-exact, so a wrong-case URL is simply not approved |
 | `%2e%2e`, `%252e`, `%2f`, `%5c`, backslash | dots decoded then resolved; encoded slashes/backslashes rejected (ambiguous) |
@@ -111,6 +115,14 @@ Rules are never matched against the raw string. Every URL is canonicalised first
 | real redirect from an approved page to a forbidden one | every hop is judged: the host before DNS, the full URL before the connection, so the forbidden site is **not contacted** (tested); the chain is judged again after the fetch, which also covers cached results |
 | archive / cache / translate / proxy / shortener (web.archive.org, archive.ph, webcache, translate.goog, bit.ly, ...) | rejected (`builtin/wrapper`: "cite the original page"); with `allow_archives = true` the wrapped URL must itself pass |
 | mirrors | a mirror is just another host: not listed = rejected; use `canonical = "..."` in a rule to document the original. The tool does not detect copies of content |
+
+### Public suffixes and user-content hosts (policy-writing time)
+
+`subdomains = true` on `github.io`, `blogspot.com`, `herokuapp.com` and similar multi-tenant suffixes is refused when the policy is loaded: it would approve every customer of that service. A rule on a registry-style suffix (`co.uk`, `com.au`) and a bare host rule on a user-content platform (`github.com`, `medium.com`, `reddit.com`) produce a `public-suffix:` / `user-content:` warning in `validate`. This uses a small built-in list and a pattern (`src/jev_sources/suffixes.py`), **not** the full Public Suffix List, so it is a guard rail, not a guarantee; it never changes how a URL is judged.
+
+### Where the semantics come from (and differ)
+
+From my own knowledge of these systems, not re-read for this release: Content-Security-Policy host sources ignore query and fragment, treat a path ending in `/` as a prefix, and let `*.example` match subdomains but **not** the apex (here `subdomains = true` includes the apex; the rule text says "and its subdomains"). Claude Code's `WebFetch(domain:...)` permission rules match a domain, with deny taking priority over allow. Cedar and OPA both default to deny and let a forbid/deny override a permit/allow, which is the rule here; OPA's decision logs inspired `explain` (a decision should be inspectable). The `explain` Decision line is the engine's own answer; its per-rule lines reuse the engine's matcher, so the two cannot disagree.
 
 ## Enforcement before the model sees anything
 
@@ -159,7 +171,7 @@ Same `claims.json` contract as Jev-toolkit-FactCheck (no Anthropic API key; the 
 * **First held-out run, before any fix: 18/20.** Failures: **h02** (`https://LAGEN.TEST/semester#top` came back `source_unavailable`): a bug in my *fake web*, which looked pages up by the raw string; the policy decision was right. Fixed (fixtures keyed by canonical URL), committed separately; this is a harness fix, not a rule change. **h16** (claim "40 days ... at the manager level" vs a quote saying 25 days) judged "supports" by the word-overlap baseline because most words overlap: the baseline is dumb on changed numbers, same as in Jev-toolkit-FactCheck.
 * **Dev failure kept:** d20 (claim says 240 days, quote says 480) the baseline judges "supports". Jev got it right.
 * **Jev was run on both sets after the held-out first run and the harness fix**, once each: 26/26 and 20/20. That is not a clean blind run for the held-out set (the baseline result had been seen), and the rules/engine were not changed in between.
-* **What 100% does not mean.** 46 hand-written scenarios, invented content, one author who also wrote the rules. The policy layer's 27/27 is mostly because each scenario was written to hit a rule that exists; real policies, real redirects, real pages and real attackers are messier. A 20/20 result has a 95% lower bound near 84% (Wilson). The unit tests (`tests/test_sources_*.py`) add many URL-form cases beyond the scenario sets.
+* **What 100% does not mean.** 46 hand-written scenarios, invented content, one author who also wrote the rules. The policy layer's 27/27 is mostly because each scenario was written to hit a rule that exists; real policies, real redirects, real pages and real attackers are messier. A 20/20 result has a 95% lower bound near 84% (Wilson). The unit tests (`tests/test_sources_*.py`) add many URL-form cases beyond the scenario sets, including a ~75-row trick list (`tests/test_sources_tricks.py`) probed against the engine once before it was fixed; the fixes it forced (port 80 on https, `:0`, IDNA 2003 `ß`, `;param` and `%00` against a deny) are listed in the CHANGELOG.
 * **Not measured:** real websites, real Claude Code sessions with the hook, how often a model works around a policy, non-English sources, large policies, cost over many claims, a determined adversary who knows the policy.
 
 ## Known limits (please read)

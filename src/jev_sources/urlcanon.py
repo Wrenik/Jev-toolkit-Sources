@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from urllib.parse import parse_qsl, unquote, urlsplit
 
@@ -60,13 +61,15 @@ class Canon:
     def text(self) -> str:
         if self.kind == "docset":
             return f"docset:{self.docset}/{self.relpath}"
-        port = "" if self.port in (80, 443) else f":{self.port}"
+        port = "" if self.port == (443 if self.scheme == "https" else 80) else f":{self.port}"
         return f"{self.scheme}://{self.host}{port}{self.path}" + (f"?{self.query}" if self.query else "")
 
 
 def canonical_host(host: str) -> str:
     """Lowercase, strip a trailing dot, IDNA to punycode. Raises UrlRejected for IP literals and malformed names."""
-    h = host.strip().rstrip(".").lower()
+    h = host.strip().lower()
+    if h.endswith("."):
+        h = h[:-1]  # one trailing dot is the DNS root; more than one is not a host
     if not h:
         raise UrlRejected("no_host", "empty host")
     try:
@@ -78,9 +81,14 @@ def canonical_host(host: str) -> str:
         raise UrlRejected("ip_literal_host", f"{h} is an IP address or number-style host; policies match domain names only")
     if not h.isascii():
         try:
-            h = h.encode("idna").decode("ascii")
+            ascii_h = h.encode("idna").decode("ascii")
         except UnicodeError as exc:
             raise UrlRejected("bad_idna_host", str(exc)) from exc
+        # Python's codec is IDNA 2003: it maps "straße" to "strasse", a DIFFERENT domain from the one a browser
+        # (IDNA 2008) reaches. If the name does not survive a round trip, we cannot say which host is meant.
+        if ascii_h.encode("ascii").decode("idna") != unicodedata.normalize("NFC", h):
+            raise UrlRejected("ambiguous_idna_host", f"{h!r} is mapped to a different name by IDNA 2003 ({ascii_h}); write the xn-- form of the host you mean")
+        h = ascii_h
     if any(not label or len(label) > 63 for label in h.split(".")):
         raise UrlRejected("malformed_host", h)
     if not re.fullmatch(r"[a-z0-9._-]+", h):
@@ -101,6 +109,8 @@ def _norm_path(raw_path: str) -> str:
         path = nxt
     if "\\" in path:
         raise UrlRejected("backslash", "backslashes are read as slashes by browsers; use forward slashes")
+    if any(ord(c) < 32 or ord(c) == 127 for c in unquote(path)):
+        raise UrlRejected("bad_characters", "a percent-encoded control character (such as %00) in the path")
     out: list[str] = []
     for seg in path.split("/")[1:] if path.startswith("/") else path.split("/"):
         if seg == "..":
@@ -149,6 +159,8 @@ def canonicalize(url: str, *, allow_wrappers: bool = False, _depth: int = 0) -> 
     raw_host = parts.hostname or ""
     host = canonical_host(raw_host)
     non_ascii = raw_host.lower() if not raw_host.isascii() else ""
+    if port == 0:
+        raise UrlRejected("bad_port", "port 0 is not a web port")
     port = port or (443 if scheme == "https" else 80)
     path = _norm_path(parts.path or "/")
     query = parts.query

@@ -1,0 +1,23 @@
+# Policy: answers may be backed ONLY by a folder of local documents, pinned by SHA-256 hash.
+# A file edited after approval is refused until a person re-approves it (hash again, bump the version).
+# Create this file with:   python -m jev_sources init offline-corpus --docs ./my-docs --out policy.toml
+# (that fills in the [docset.files] table). Cite files as  docset:corpus/<relative/path>.
+
+[policy]
+name = "offline-corpus"
+version = "1.0.0"
+
+[[changelog]]
+version = "1.0.0"
+date = "@DATE@"
+note = "First version: the local corpus as it was on this date."
+
+[[allow]]
+id = "corpus"
+docset = "corpus"
+
+[[docset]]
+id = "corpus"
+root = "@ROOT@"                   # relative to this policy file
+[docset.files]
+@FILES@
