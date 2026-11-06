@@ -5,8 +5,6 @@
 ![status](https://img.shields.io/badge/status-alpha-orange)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-(The badges start working once the repository is public.)
-
 **Source restriction:** an answer may only be backed by sources on an allowlist **policy** you write and version (a plain TOML file). Like [Jev-toolkit-FactCheck](https://github.com/Wrenik/Jev-toolkit-FactCheck), a claim fails if its verbatim quote is not in its source or does not support it, but it also **fails if its source is not on the policy**. The policy is enforced twice: before the model sees retrieval results (`filter`, `fetch`, an optional Claude Code hook) and after it answers (`check`). Every rejection names the rule and what would have been allowed. If the approved sources do not contain the answer, the tool says so; it never relaxes the policy. The rewrite loop is hard-capped at 3 rounds.
 
 Depends on [Jev-toolkit-FactCheck](https://github.com/Wrenik/Jev-toolkit-FactCheck) (claims, quote matching, safe fetcher, correction loop) and [Jev-toolkit-usage](https://github.com/Wrenik/Jev-toolkit-usage) (the `Judge` interface, cache, redaction, data location).
@@ -22,19 +20,17 @@ Depends on [Jev-toolkit-FactCheck](https://github.com/Wrenik/Jev-toolkit-FactChe
 
 Want all six tools? Use [the install script](https://github.com/Wrenik/Jev-toolkit-usage/blob/main/docs/INSTALL_ALL.md) (`scripts/install_all.ps1` or `.sh` in Jev-toolkit-usage) instead of the steps below.
 
-Requires Python 3.11+. Until the repositories are public, install the siblings from local clones. Make the virtual environment **outside** the clones (or anywhere you like):
+Requires Python 3.11+. Make the virtual environment **outside** any clone (or anywhere you like):
 
 ```bash
 python -m venv ~/jev-venv
 # Windows: ~/jev-venv/Scripts/python   Linux/macOS: ~/jev-venv/bin/python
 PY=~/jev-venv/Scripts/python
-$PY -m pip install -e ./Jev-toolkit-usage
-$PY -m pip install -e ./Jev-toolkit-FactCheck --no-deps
-$PY -m pip install -e ./Jev-toolkit-Sources --no-deps
+$PY -m pip install "git+https://github.com/Wrenik/Jev-toolkit-Sources.git"   # also installs FactCheck and usage
 $PY -m jev_sources demo
 ```
 
-Once public: `pip install "jev-toolkit-sources @ git+https://github.com/Wrenik/Jev-toolkit-Sources.git"` (pulls in both dependencies). Data (logs, cache, your default policy file) lives in `JEV_HOME` (default `~/.jev-toolkit`, under `var/`); a `.env` with `TYPESAFE_API_KEY` there is only needed for the real judge. CI checks out both dependency repos and installs them editable.
+Data (logs, cache, your default policy file) lives in `JEV_HOME` (default `~/.jev-toolkit`, under `var/`); a `.env` with `TYPESAFE_API_KEY` there is only needed for the real judge. CI checks out both dependency repos and installs them editable.
 
 ## Quick try (offline, no key)
 
@@ -91,7 +87,7 @@ See [docs/PRIOR_ART.md](docs/PRIOR_ART.md): related tools, what they do, and wha
 | [Jev-toolkit-FactCheck](https://github.com/Wrenik/Jev-toolkit-FactCheck) | fact checker with hover evidence | usage (Scanner optional) |
 | **Jev-toolkit-Sources** (this one) | source restriction (allowlist policy) | usage, FactCheck |
 
-All six on one machine: [docs/INSTALL_ALL.md](https://github.com/Wrenik/Jev-toolkit-usage/blob/main/docs/INSTALL_ALL.md) (a script does it). The links work once the repositories are public.
+All six on one machine: [docs/INSTALL_ALL.md](https://github.com/Wrenik/Jev-toolkit-usage/blob/main/docs/INSTALL_ALL.md) (a script does it). All six repositories are public.
 
 ## Contributing, security, license
 

@@ -20,6 +20,6 @@ An experimental learning project: restrict an answer to sources on a policy you 
 
 ## Install
 
-See the README: a virtual environment outside the clones, then three `pip install -e` lines until the repositories are public. Python 3.11+.
+See the README: a virtual environment, then one `pip install` from GitHub. Python 3.11+.
 
 Full list of changes and the bugs found during release hardening: [CHANGELOG.md](../CHANGELOG.md).
